@@ -1,0 +1,1431 @@
+<!doctype html>
+<html lang="zh-Hant" data-theme="light" style="color-scheme: light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>竹跡 ChuTrace Demo</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;600;700;800&family=Noto+Sans+TC:wght@400;500;700;900&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Huninn&display=swap">
+<style>
+/* Layout: presenter script on the left, a Scouties-style phone app on the right (playful, colorful, rounded); phone-first stack on narrow screens. */
+:root {
+  /* page (theme-aware) */
+  --pg-bg: #eef0fb; --pg-ink: #22213a; --pg-muted: #6b6a85; --pg-line: #dcdcf0; --pg-card: #ffffff; --pg-accent: #5b4fe0;
+  /* app (fixed bright look, same as the Scouties app) */
+  --main: #6a5cf0; --main-deep: #4b3fd0; --main-soft: #ecebff;
+  --yellow: #fcbc10; --yellow-soft: #fff4d1;
+  --green: #8fd17a; --green-deep: #2f9a44; --green-soft: #e5f6df;
+  --pink: #e09a99; --rose: #c05757; --navy: #363a6f;
+  --ink: #22213a; --gray: #9c9cb0; --line: #ececf4; --bg: #f6f6fc; --white: #ffffff; --red: #e0483b;
+  --font-round: "Huninn", "Noto Sans TC", "PingFang TC", sans-serif;
+  --font-body: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+  --font-num: "Poppins", "Noto Sans TC", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) { --pg-bg: #14131f; --pg-ink: #ecebf7; --pg-muted: #a3a2bd; --pg-line: #2e2d44; --pg-card: #1d1c2c; --pg-accent: #a99fff; color-scheme: dark; }
+}
+:root[data-theme="dark"] { --pg-bg: #14131f; --pg-ink: #ecebf7; --pg-muted: #a3a2bd; --pg-line: #2e2d44; --pg-card: #1d1c2c; --pg-accent: #a99fff; color-scheme: dark; }
+
+* { box-sizing: border-box; }
+body {
+  background: var(--pg-bg); color: var(--pg-ink); font-family: var(--font-body); font-size: 15px; line-height: 1.6; margin: 0;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); padding-block: 24px;
+}
+button { font: inherit; color: inherit; cursor: pointer; border: 0; background: none; padding: 0; }
+button:focus-visible, input:focus-visible { outline: 3px solid var(--yellow); outline-offset: 2px; }
+.stage { max-width: 1140px; margin: 0 auto; display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 44px; align-items: start; }
+
+/* ---------- presenter panel ---------- */
+.panel { display: grid; gap: 22px; padding-top: 6px; min-width: 0; }
+.eyebrow { font-size: 12px; letter-spacing: .12em; color: var(--pg-muted); font-weight: 700; }
+.brand h1 { margin: 2px 0 6px; font-family: var(--font-round); font-size: 44px; line-height: 1.1; font-weight: 400; }
+.brand h1 b { font-family: var(--font-num); font-weight: 800; color: var(--pg-accent); font-size: .82em; letter-spacing: -.01em; }
+.brand p { margin: 0; color: var(--pg-muted); max-width: 32em; }
+.steps { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.steps button { width: 100%; text-align: left; display: grid; grid-template-columns: 30px minmax(0, 1fr); gap: 12px; padding: 9px 12px; border-radius: 14px; border: 1px solid transparent; }
+.steps button:hover { background: var(--pg-card); }
+.steps .n { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; font: 700 13px var(--font-num); background: var(--pg-card); border: 1px solid var(--pg-line); color: var(--pg-muted); }
+.steps .t { font-weight: 700; display: block; }
+.steps .s { display: none; font-size: 13.5px; color: var(--pg-muted); }
+.steps li.done .n { background: var(--green-soft); color: var(--green-deep); border-color: transparent; }
+.steps li.now button { background: var(--pg-card); border-color: var(--pg-line); }
+.steps li.now .n { background: var(--pg-accent); color: var(--pg-card); border-color: transparent; }
+.steps li.now .s { display: block; }
+.panel-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+.ghost { background: var(--pg-card); border: 1px solid var(--pg-line); border-radius: 999px; padding: 7px 16px; font-size: 13.5px; font-weight: 500; }
+.ghost.primary { background: var(--pg-accent); color: var(--pg-card); border-color: transparent; }
+.bounds { border-top: 1px solid var(--pg-line); padding-top: 16px; display: grid; gap: 8px; font-size: 13.5px; color: var(--pg-muted); }
+.bounds ul { margin: 0; padding-left: 1.1em; display: grid; gap: 4px; }
+.bounds b { color: var(--pg-ink); font-weight: 500; }
+
+/* ---------- phone shell ---------- */
+.phone { width: 390px; height: min(820px, calc(100dvh - 48px)); min-height: 660px; background: var(--white); color: var(--ink);
+  border: 11px solid #15141f; border-radius: 48px; overflow: hidden; display: flex; flex-direction: column; position: relative;
+  box-shadow: 0 40px 80px -40px rgba(60, 40, 160, .5); }
+.status { position: absolute; top: 0; left: 0; right: 0; z-index: 30; height: 34px; display: flex; justify-content: space-between; align-items: center; padding: 0 26px; font: 600 13px var(--font-num); pointer-events: none; }
+.status.light { color: #fff; }
+.status .sim { font: 500 10px var(--font-body); opacity: .7; margin-left: 4px; }
+.app { position: relative; flex: 1; overflow: hidden; background: var(--bg); }
+.view { position: absolute; inset: 0; overflow-y: auto; overflow-x: hidden; padding: 44px 18px 120px; scrollbar-width: none; }
+.view::-webkit-scrollbar { display: none; }
+.view.full { padding: 0; overflow: hidden; }
+.view.nobar { padding-bottom: 28px; }
+.view.enter { animation: viewIn .32s ease both; }
+@keyframes viewIn { from { opacity: 0; transform: translateY(12px); } }
+.ic { width: 1em; height: 1em; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+
+/* tab bar (Scouties notch indicator) */
+.tabbar { position: absolute; left: 0; right: 0; bottom: 0; height: 82px; background: var(--main); z-index: 20; display: grid; grid-template-columns: repeat(4, 1fr); padding: 0 12px 10px; transition: transform .3s; }
+.tabbar.hide { transform: translateY(calc(100% + 48px)); pointer-events: none; }
+.tabbar.hide .indicator { opacity: 0; }
+.tabbar::before { content: ""; position: absolute; left: 0; right: 0; top: -10px; height: 10px; background: linear-gradient(transparent, rgba(0,0,0,.04)); }
+.tab { position: relative; z-index: 2; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; color: #fff; padding-bottom: 6px; gap: 2px; }
+.tab .ic { font-size: 24px; transition: transform .45s cubic-bezier(.5,1.6,.4,1), color .3s; opacity: .8; }
+.tab span { font-size: 11px; font-weight: 700; letter-spacing: .04em; }
+.tab.on .ic { transform: translateY(-26px); color: var(--main); opacity: 1; }
+.tab.on span { transform: translateY(-4px); }
+.indicator { position: absolute; z-index: 1; top: -26px; width: 64px; height: 64px; border-radius: 50%; background: var(--white); border: 7px solid var(--bg); transition: left .45s cubic-bezier(.5,1.4,.4,1); box-shadow: 0 6px 14px rgba(70,50,200,.25); }
+
+/* common pieces */
+.hello { display: flex; justify-content: space-between; align-items: center; margin-top: 8px; }
+.hello h2 { margin: 0; font: 400 26px var(--font-round); }
+.avatar { width: 48px; height: 48px; border-radius: 50%; background: var(--yellow-soft); border: 2px solid var(--ink); display: grid; place-items: center; overflow: hidden; }
+.loc { display: flex; align-items: center; gap: 4px; color: var(--gray); font-size: 13.5px; }
+.askbar { margin-top: 14px; display: flex; gap: 8px; align-items: center; }
+.askbar .field { flex: 1; display: flex; align-items: center; gap: 8px; background: #fff; border-radius: 18px; padding: 11px 14px; box-shadow: 0 6px 18px rgba(60,50,150,.10); color: var(--gray); font-size: 14px; text-align: left; }
+.sqbtn { width: 46px; height: 46px; border-radius: 15px; background: var(--main); color: #fff; display: grid; place-items: center; font-size: 22px; flex: none; box-shadow: 0 8px 16px rgba(106,92,240,.35); }
+.sec { display: flex; justify-content: space-between; align-items: baseline; margin: 22px 2px 10px; }
+.sec h3 { margin: 0; font-size: 17px; font-weight: 900; }
+.sec small { color: var(--gray); font-size: 12.5px; }
+.hscroll { display: flex; gap: 14px; overflow-x: auto; scroll-snap-type: x mandatory; margin: 0 -18px; padding: 4px 18px 14px; scroll-padding-inline: 18px; scrollbar-width: none; cursor: grab; user-select: none; -webkit-user-select: none; touch-action: pan-x pan-y; }
+.hscroll svg { pointer-events: none; }
+.dots i { cursor: pointer; }
+.hscroll::-webkit-scrollbar { display: none; }
+.banner { flex: 0 0 88%; scroll-snap-align: start; height: 150px; border-radius: 24px; position: relative; overflow: hidden; color: #fff; padding: 18px 20px; text-align: left; display: flex; flex-direction: column; justify-content: flex-end; }
+.banner .big { font: 800 30px/1 var(--font-num); letter-spacing: .02em; }
+.banner .zh { font: 400 19px var(--font-round); margin-top: 4px; }
+.banner .go { position: absolute; right: 16px; bottom: 16px; width: 44px; height: 44px; border-radius: 50%; background: #fff; color: var(--ink); display: grid; place-items: center; font-size: 20px; }
+.banner .soon { position: absolute; top: 14px; right: 14px; font-size: 11px; font-weight: 700; background: rgba(0,0,0,.25); padding: 2px 10px; border-radius: 999px; }
+.banner svg.bg { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; }
+.banner > *:not(svg) { position: relative; z-index: 1; }
+.dots { display: flex; justify-content: center; gap: 6px; margin-top: -4px; }
+.dots i { width: 6px; height: 6px; border-radius: 3px; background: #d6d4ea; transition: width .3s, background .3s; }
+.dots i.on { width: 18px; background: var(--main); }
+.pcard { flex: 0 0 220px; scroll-snap-align: start; background: #fff; border-radius: 22px; overflow: hidden; box-shadow: 0 8px 22px rgba(60,50,150,.12); text-align: left; transition: transform .2s; }
+.pcard:active { transform: scale(.97); }
+.pcard .img { height: 132px; }
+.pcard .img svg { width: 100%; height: 100%; display: block; }
+.pcard .b { padding: 10px 14px 14px; display: grid; gap: 3px; }
+.pcard .nm { font-weight: 900; font-size: 15px; }
+.meta { display: flex; align-items: center; gap: 4px; color: var(--gray); font-size: 12px; }
+.meta .ic { color: var(--main); font-size: 15px; }
+.meta .y { color: var(--yellow); }
+.free { font: 700 13px var(--font-num); color: var(--main); }
+.helpcard { margin-top: 8px; background: var(--navy); color: #fff; border-radius: 22px; padding: 18px 20px; display: flex; justify-content: space-between; align-items: center; text-align: left; width: 100%; }
+.helpcard b { font: 400 20px var(--font-round); display: block; }
+.helpcard small { opacity: .8; }
+.helpcard .go { width: 36px; height: 36px; border-radius: 50%; background: #fff; color: var(--ink); display: grid; place-items: center; }
+.livecard { width: 100%; text-align: left; background: linear-gradient(135deg, var(--main), #8f6cf5); color: #fff; border-radius: 22px; padding: 16px 18px; display: grid; gap: 8px; margin-top: 14px; box-shadow: 0 12px 24px rgba(106,92,240,.3); }
+.livecard .bar { height: 8px; border-radius: 4px; background: rgba(255,255,255,.25); overflow: hidden; }
+.livecard .bar i { display: block; height: 100%; background: var(--yellow); border-radius: 4px; }
+
+/* round icon buttons (white ring) */
+.rbtn { width: 46px; height: 46px; border-radius: 50%; background: #fff; display: grid; place-items: center; box-shadow: 0 4px 12px rgba(0,0,0,.12); flex: none; }
+.rbtn > i { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-size: 19px; }
+.glass { width: 46px; height: 46px; border-radius: 50%; background: rgba(40,40,60,.45); color: #fff; display: grid; place-items: center; font-size: 22px; backdrop-filter: blur(6px); }
+.topbar { position: absolute; z-index: 10; top: 40px; left: 14px; right: 14px; display: flex; justify-content: space-between; align-items: center; gap: 8px; pointer-events: none; }
+.topbar > * { pointer-events: auto; }
+.scorebox { display: flex; align-items: center; gap: 10px; background: #fff; border-radius: 18px; padding: 5px 12px 5px 5px; box-shadow: 0 4px 14px rgba(0,0,0,.1); }
+.scorebox .back { width: 38px; height: 38px; border-radius: 50%; background: var(--bg); display: grid; place-items: center; font-size: 20px; color: #555; }
+.scorebox b { font: 700 14px var(--font-num); }
+.prog { display: inline-flex; align-items: center; gap: 4px; background: var(--green-soft); color: var(--green-deep); font: 700 12px var(--font-num); padding: 2px 9px; border-radius: 999px; }
+.coinpill { display: inline-flex; align-items: center; gap: 5px; font: 700 14px var(--font-num); }
+.coin { width: 18px; height: 18px; border-radius: 50%; background: radial-gradient(circle at 35% 35%, #ffe27a, var(--yellow) 60%, #d99500); box-shadow: inset 0 0 0 2px #f0a800; display: inline-block; flex: none; }
+.rgroup { display: flex; gap: 8px; }
+
+/* chat */
+.chat { display: flex; flex-direction: column; height: 100%; background: linear-gradient(#f1efff, var(--bg) 40%); }
+.chat header { padding: 44px 16px 12px; display: flex; align-items: center; gap: 12px; background: #fff; box-shadow: 0 2px 10px rgba(0,0,0,.05); }
+.chat header .t b { display: block; font: 400 18px var(--font-round); }
+.chat header .t small { color: var(--green-deep); font-size: 12px; }
+.msgs { flex: 1; min-height: 0; overflow-y: auto; padding: 16px 14px; display: flex; flex-direction: column; gap: 10px; scrollbar-width: none; }
+.msgs > * { flex-shrink: 0; }
+.quick .btn { flex: 1; width: auto; padding: 11px 12px; }
+.msg { max-width: 82%; padding: 10px 14px; border-radius: 20px; font-size: 15px; line-height: 1.55; animation: pop .3s cubic-bezier(.4,1.6,.5,1) both; }
+@keyframes pop { from { opacity: 0; transform: scale(.85) translateY(8px); } }
+.msg.bot { background: #fff; border-bottom-left-radius: 6px; align-self: flex-start; box-shadow: 0 3px 10px rgba(60,50,150,.08); font-family: var(--font-round); font-size: 16px; }
+.msg.me { background: var(--main); color: #fff; border-bottom-right-radius: 6px; align-self: flex-end; }
+.botrow { display: flex; gap: 8px; align-items: flex-end; }
+.botrow .mini { width: 34px; flex: none; }
+.typing { display: inline-flex; gap: 4px; padding: 14px 16px; }
+.typing i { width: 7px; height: 7px; border-radius: 50%; background: var(--gray); animation: blink 1s infinite; }
+.typing i:nth-child(2) { animation-delay: .15s; } .typing i:nth-child(3) { animation-delay: .3s; }
+@keyframes blink { 50% { opacity: .25; transform: translateY(-3px); } }
+.quick { display: flex; flex-wrap: wrap; gap: 8px; padding: 0 14px 10px; }
+.qchip { padding: 8px 15px; border-radius: 999px; background: #fff; border: 2px solid var(--main-soft); color: var(--main-deep); font-weight: 700; font-size: 14px; transition: transform .15s, background .15s; }
+.qchip:active { transform: scale(.94); }
+.qchip.on { background: var(--main); color: #fff; border-color: var(--main); }
+.qchip.send { background: var(--yellow); border-color: var(--yellow); color: var(--ink); }
+.composer { display: flex; align-items: center; min-width: 0; gap: 8px; padding: 10px 14px 18px; background: #fff; border-top: 1px solid var(--line); }
+.composer input { flex: 1; min-width: 0; width: 100%; border: 0; background: var(--bg); border-radius: 16px; padding: 11px 14px; font: inherit; font-size: 14.5px; color: var(--ink); }
+.routepeek { align-self: flex-start; width: calc(100% - 42px); background: #fff; border-radius: 22px; overflow: hidden; box-shadow: 0 8px 22px rgba(60,50,150,.14); animation: pop .35s both; margin-left: 42px; }
+.routepeek .top { background: var(--main); color: #fff; padding: 12px 16px; }
+.routepeek .top b { font: 400 18px var(--font-round); display: block; }
+.routepeek ol { margin: 0; padding: 12px 16px 4px 34px; font-size: 14px; }
+.routepeek .btn { margin: 8px 12px 12px; width: calc(100% - 24px); }
+.routepeek .btn + .btn { margin-top: -2px; }
+.ailabel { font-size: 11px; color: var(--gray); align-self: center; }
+
+/* buttons */
+.btn { display: flex; align-items: center; justify-content: center; gap: 6px; width: 100%; padding: 13px 16px; border-radius: 16px; font-weight: 900; font-size: 15.5px; background: var(--main); color: #fff; box-shadow: 0 8px 16px rgba(106,92,240,.3); transition: transform .15s, filter .15s; }
+.btn:active { transform: scale(.97); }
+.btn.green { background: var(--green-deep); box-shadow: 0 8px 16px rgba(47,154,68,.3); }
+.btn.yellow { background: var(--yellow); color: var(--ink); box-shadow: 0 8px 16px rgba(252,188,16,.35); }
+.btn.line { background: #fff; color: var(--ink); border: 1.5px solid #d8d8e6; box-shadow: none; }
+.btn.white-line { background: transparent; color: #fff; border: 1.5px solid #fff; box-shadow: none; }
+.btn.auto { position: relative; overflow: hidden; }
+.autobar { position: absolute; left: 0; bottom: 0; height: 4px; width: 0; background: rgba(255,255,255,.75); animation: autobar linear forwards; }
+@keyframes autobar { to { width: 100%; } }
+.btnrow { display: flex; gap: 10px; }
+
+/* route detail (storymode style) */
+.hero { position: relative; height: 270px; margin: -44px -18px 0; overflow: hidden; }
+.hero svg.scene { width: 100%; height: 100%; display: block; }
+.hero .glass { position: absolute; top: 44px; }
+.hero .tabs { position: absolute; left: 0; bottom: 0; display: flex; z-index: 2; }
+.hero .tabs span { height: 40px; display: flex; align-items: center; gap: 6px; padding: 0 26px; font-size: 14px; font-weight: 900; border-radius: 0 30px 0 0; }
+.hero .tabs .a { background: #fff; color: var(--main); box-shadow: 5px 0 6px rgba(0,0,0,.15); position: relative; z-index: 2; }
+.hero .tabs .b { background: var(--yellow); color: #fff; margin-left: -30px; padding-left: 46px; }
+.titlerow h2 { margin: 18px 0 2px; font: 400 24px var(--font-round); }
+.stars { display: flex; align-items: center; gap: 2px; color: var(--yellow); font-size: 15px; }
+.stars span { color: var(--gray); font-size: 13px; margin-left: 6px; }
+.seg { display: flex; background: #fff; border-radius: 16px; padding: 4px; box-shadow: inset 0 3px 8px rgba(0,0,0,.07); }
+.seg button { flex: 1; padding: 8px 0; border-radius: 12px; font: 700 14px var(--font-num); color: var(--gray); transition: background .25s, color .25s; }
+.seg button.on { background: var(--main); color: #fff; box-shadow: 0 4px 10px rgba(106,92,240,.3); }
+.label { color: var(--gray); font-weight: 900; font-size: 14px; margin: 20px 2px 10px; }
+.tiles3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 34px; }
+.ftile { position: relative; background: #fff; border-radius: 20px; padding: 32px 6px 12px; text-align: center; box-shadow: inset 0 4px 10px rgba(0,0,0,.08); }
+.ftile .fi { position: absolute; top: -26px; left: 50%; transform: translateX(-50%); width: 52px; height: 52px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-size: 26px; box-shadow: 0 0 0 5px var(--bg); }
+.ftile small { display: block; color: var(--gray); font-weight: 700; font-size: 12.5px; }
+.ftile b { color: var(--main); font-size: 14px; }
+.tiles2 { display: grid; grid-template-columns: 1.25fr 1fr; gap: 10px; margin-top: 12px; }
+.tiles2 .col { display: grid; gap: 10px; }
+.htile { background: #fff; border-radius: 20px; padding: 12px 14px; display: flex; align-items: center; gap: 12px; box-shadow: inset 0 4px 10px rgba(0,0,0,.08); color: var(--gray); font-weight: 700; font-size: 13px; line-height: 1.35; }
+.htile b { display: block; color: var(--ink); font: 700 17px var(--font-num); }
+.htile .ci { width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; color: #fff; font-size: 22px; flex: none; }
+.bigtile { background: var(--main); color: #fff; border-radius: 20px; display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 12px; box-shadow: inset 0 4px 10px rgba(0,0,0,.12); text-align: center; }
+.bigtile small { font-weight: 700; font-size: 13px; opacity: .9; }
+.bigtile b { font: 800 44px/1.1 var(--font-num); }
+.bigtile span { font-size: 12px; opacity: .85; }
+.stoplist { display: grid; gap: 10px; }
+.stop { display: grid; grid-template-columns: 64px minmax(0, 1fr) auto; gap: 12px; align-items: center; background: #fff; border-radius: 20px; padding: 8px 12px 8px 8px; box-shadow: 0 5px 14px rgba(60,50,150,.08); text-align: left; width: 100%; }
+.stop .th { width: 64px; height: 64px; border-radius: 14px; overflow: hidden; position: relative; }
+.stop .th svg { width: 100%; height: 100%; display: block; }
+.stop .th em { position: absolute; left: 4px; top: 4px; width: 20px; height: 20px; border-radius: 50%; background: var(--main); color: #fff; font: 700 11px/20px var(--font-num); text-align: center; font-style: normal; }
+.stop .nm { font-weight: 900; font-size: 14.5px; }
+.stop .why { font-size: 12.5px; color: var(--gray); line-height: 1.45; }
+.stop .tm { font: 700 13px var(--font-num); color: var(--main); text-align: right; }
+.stop.done { opacity: .6; }
+.leg { display: flex; align-items: center; gap: 6px; color: var(--gray); font-size: 12.5px; padding-left: 30px; }
+.about { background: #fff; border-radius: 20px; padding: 14px 16px; font-size: 14px; display: grid; gap: 6px; }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font-size: 12.5px; padding: 3px 11px; border-radius: 999px; background: var(--main-soft); color: var(--main-deep); font-weight: 700; }
+.chip.y { background: var(--yellow-soft); color: #a07000; }
+.checks { margin: 0; padding: 0; list-style: none; display: grid; gap: 5px; font-size: 13.5px; }
+.checks li { display: flex; gap: 8px; align-items: center; }
+.checks .ic { color: var(--green-deep); font-size: 16px; }
+.simtag { display: inline-block; font-size: 10.5px; font-weight: 900; letter-spacing: .06em; padding: 1px 8px; border-radius: 6px; background: var(--yellow-soft); color: #a07000; vertical-align: 2px; }
+.sticky { margin-top: 18px; }
+
+/* map */
+.mapwrap { position: absolute; inset: 0; overflow: hidden; touch-action: none; cursor: grab; background: #f3ecd9; }
+.mapwrap.drag { cursor: grabbing; }
+.mapwrap svg.map { position: absolute; left: 0; top: 0; width: 1000px; height: 1000px; transform-origin: 0 0; will-change: transform; }
+.map text { font-family: var(--font-round); }
+.mk { cursor: pointer; }
+.mk .pulse { transform-box: fill-box; transform-origin: center; animation: pulse 1.6s ease-out infinite; }
+@keyframes pulse { from { transform: scale(.6); opacity: .7; } to { transform: scale(2.2); opacity: 0; } }
+.me .ring { transform-box: fill-box; transform-origin: center; animation: pulse 2s ease-out infinite; }
+.mapctl { position: absolute; z-index: 8; right: 14px; display: grid; gap: 8px; transition: bottom .35s; }
+.mapctl button { width: 44px; height: 44px; border-radius: 50%; background: #fff; box-shadow: 0 4px 12px rgba(0,0,0,.15); display: grid; place-items: center; font-size: 20px; }
+.modechip { position: absolute; z-index: 8; left: 14px; top: 96px; background: #fff; border-radius: 999px; padding: 6px 12px; font-size: 12.5px; font-weight: 700; box-shadow: 0 4px 12px rgba(0,0,0,.12); display: flex; align-items: center; gap: 6px; }
+.modechip i { width: 8px; height: 8px; border-radius: 50%; background: var(--green-deep); }
+
+/* bottom sheet */
+.sheet { position: absolute; z-index: 12; left: 10px; right: 10px; bottom: 92px; background: #fff; border-radius: 26px; padding: 8px 16px 16px; box-shadow: 0 -6px 30px rgba(40,30,120,.18); transition: transform .35s cubic-bezier(.3,1.2,.4,1), bottom .35s; touch-action: none; }
+.sheet.nobar { bottom: 14px; }
+.sheet .handle { display: block; width: 100%; padding: 4px 0 10px; }
+.sheet .handle i { display: block; width: 44px; height: 5px; border-radius: 3px; background: #d6d6e2; margin: 0 auto; }
+.sheet .row { display: flex; gap: 12px; align-items: center; }
+.sheet .info { flex: 1; min-width: 0; display: grid; gap: 2px; }
+.sheet .k { color: var(--gray); font-size: 12.5px; font-weight: 700; }
+.sheet .nm { font-weight: 900; font-size: 18px; line-height: 1.3; }
+.sheet .d { color: var(--main); font-size: 13px; font-weight: 700; }
+.sheet .pic { width: 88px; height: 88px; border-radius: 16px; overflow: hidden; flex: none; }
+.sheet .pic svg { width: 100%; height: 100%; display: block; }
+.sheet .more { overflow: hidden; max-height: 0; transition: max-height .35s ease; }
+.sheet.open .more { max-height: 260px; }
+.sheet .acts { display: grid; gap: 8px; margin-top: 12px; }
+.walkbar { height: 10px; background: var(--bg); border-radius: 5px; overflow: hidden; margin-top: 10px; }
+.walkbar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, var(--green), var(--green-deep)); border-radius: 5px; }
+.eta { display: flex; justify-content: space-between; font: 600 12.5px var(--font-num); color: var(--gray); margin-top: 6px; }
+.speed { display: flex; gap: 6px; margin-top: 10px; }
+.speed button { flex: 1; padding: 6px; border-radius: 10px; background: var(--bg); font: 700 12.5px var(--font-num); color: var(--gray); }
+.speed button.on { background: var(--main-soft); color: var(--main-deep); }
+
+/* story (gamestart style) */
+.storyhero { position: relative; height: 300px; margin: -44px -18px 0; }
+.storyhero svg.scene { width: 100%; height: 100%; display: block; }
+.storyhero .wave { position: absolute; left: 0; right: 0; bottom: -1px; width: 100%; height: 46px; }
+.storyhero .topbar { top: 40px; }
+.story h2 { text-align: center; margin: 6px 0 12px; font: 400 25px var(--font-round); }
+.guide { display: grid; grid-template-columns: 52px minmax(0, 1fr); gap: 10px; align-items: end; }
+.bubble { background: var(--main-soft); border-radius: 20px 20px 20px 6px; padding: 12px 15px; font: 400 16.5px/1.65 var(--font-round); }
+.facts { background: #fff; border-radius: 18px; padding: 12px 16px; display: grid; gap: 6px; font-size: 14px; margin-top: 12px; }
+.facts b { color: var(--main-deep); }
+.eggtip { display: flex; gap: 8px; align-items: center; font-size: 13px; color: #a07000; background: var(--yellow-soft); border-radius: 12px; padding: 8px 12px; margin-top: 10px; }
+.egg { cursor: pointer; }
+.egg:hover { filter: brightness(1.15); }
+
+/* quiz (challenge style) */
+.quizview { background: var(--pink); }
+.quizbg { position: absolute; inset: 0; width: 100%; height: 100%; z-index: 0; }
+.quizview > *:not(.quizbg) { position: relative; z-index: 1; }
+.chtag { margin: 54px auto 12px; display: block; width: fit-content; background: #fff; color: var(--rose); font: 800 20px var(--font-num); letter-spacing: .12em; padding: 6px 22px; border-radius: 14px; box-shadow: 0 6px 0 var(--rose); }
+.qimg { border-radius: 20px; overflow: hidden; border: 4px solid #fff; box-shadow: 0 8px 20px rgba(0,0,0,.15); height: 168px; }
+.qimg svg { width: 100%; height: 100%; display: block; }
+.qcard { background: #fff; border-radius: 20px; padding: 14px 16px; margin-top: 12px; font-weight: 900; font-size: 16px; line-height: 1.5; }
+.qcard small { display: block; color: var(--gray); font-weight: 700; font-size: 12px; margin-bottom: 2px; }
+.qgrid { background: #fff; border-radius: 20px; padding: 10px; margin-top: 12px; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.qopt { border: 2px solid var(--line); border-radius: 16px; padding: 14px 8px; font-weight: 900; font-size: 15px; display: grid; gap: 6px; justify-items: center; transition: transform .15s, border-color .15s, background .15s; min-height: 92px; align-content: center; }
+.qopt .gl { width: 36px; height: 36px; border-radius: 50%; display: grid; place-items: center; font: 400 18px var(--font-round); color: #fff; }
+.qopt.sel { border-color: var(--main); background: var(--main-soft); transform: translateY(-2px); }
+.qopt.bad { opacity: .35; text-decoration: line-through; }
+.qopt.full { grid-column: 1 / -1; min-height: 0; grid-auto-flow: column; justify-content: start; padding: 10px 14px; }
+.shake { animation: shake .4s; }
+@keyframes shake { 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
+.hintbox { margin-top: 12px; background: var(--yellow-soft); border-radius: 16px; padding: 10px 14px; font-size: 14px; color: #7a5600; display: flex; gap: 8px; align-items: center; animation: pop .3s both; }
+
+/* modal */
+.modal { position: absolute; inset: 0; z-index: 40; background: rgba(25,20,60,.45); display: flex; align-items: flex-end; justify-content: center; padding: 14px; animation: fade .2s both; }
+.modal.center { align-items: center; }
+@keyframes fade { from { opacity: 0; } }
+.mbox { width: 100%; background: #fff; border-radius: 28px; padding: 22px 18px 18px; text-align: center; display: grid; gap: 10px; animation: rise .4s cubic-bezier(.3,1.4,.5,1) both; max-height: 100%; overflow-y: auto; }
+@keyframes rise { from { transform: translateY(40px) scale(.95); opacity: 0; } }
+.mbox h3 { margin: 0; font: 400 22px var(--font-round); }
+.mbox p { margin: 0; color: var(--gray); font-size: 14px; }
+.mbox .burst { width: 96px; height: 96px; margin: 0 auto; border-radius: 50%; display: grid; place-items: center; background: var(--yellow-soft); }
+.mbox .burst .coin { width: 56px; height: 56px; box-shadow: inset 0 0 0 5px #f0a800, 0 8px 18px rgba(240,168,0,.4); animation: spin 1.2s ease both; }
+@keyframes spin { from { transform: rotateY(0) scale(.4); } to { transform: rotateY(720deg) scale(1); } }
+.plus { font: 800 40px/1 var(--font-num); color: var(--yellow); text-shadow: 0 2px 0 #d99500; }
+.ropt { text-align: left; border: 2px solid var(--line); border-radius: 20px; padding: 12px 14px; display: grid; gap: 4px; position: relative; }
+.ropt.rec { border-color: var(--main); background: #faf9ff; }
+.ropt.fail { background: #fbf6f6; border-style: dashed; }
+.ropt .r1 { display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+.ropt b { font-size: 15px; font-weight: 900; }
+.ropt .d { font-size: 13px; color: var(--gray); line-height: 1.45; }
+.ropt .rtag { font-size: 11px; font-weight: 900; color: #fff; background: var(--main); padding: 1px 9px; border-radius: 999px; }
+.buf { font: 700 12px var(--font-num); padding: 2px 10px; border-radius: 999px; white-space: nowrap; }
+.buf.ok { background: var(--green-soft); color: var(--green-deep); }
+.buf.tight { background: var(--yellow-soft); color: #a07000; }
+.buf.fail { background: #fde4e1; color: var(--red); }
+.timebar { position: relative; height: 26px; background: var(--bg); border-radius: 8px; overflow: hidden; margin-top: 4px; }
+.timebar i { position: absolute; top: 0; bottom: 0; left: 0; border-radius: 8px; }
+.timebar .dl { position: absolute; top: -2px; bottom: -2px; width: 2px; background: var(--red); }
+.timebar span { position: absolute; right: 8px; top: 3px; font: 600 11px var(--font-num); color: var(--ink); }
+.delaybox { background: #fde4e1; border-radius: 18px; padding: 12px 14px; text-align: left; font-size: 14px; display: grid; gap: 4px; }
+.delaybox b { color: var(--red); }
+
+/* finish / badges / wallet */
+.finish { background: linear-gradient(var(--main) 0 280px, var(--bg) 280px); }
+.finish .head { color: #fff; text-align: center; padding-top: 10px; }
+.finish .head h2 { margin: 0; font: 400 28px var(--font-round); }
+.bigbadge { width: 190px; height: 190px; margin: 14px auto 0; display: block; filter: drop-shadow(0 14px 20px rgba(0,0,0,.25)); animation: badgeIn 1s cubic-bezier(.3,1.5,.5,1) both; }
+@keyframes badgeIn { from { transform: rotate(-200deg) scale(.2); opacity: 0; } }
+.statgrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-top: 16px; }
+.statgrid div { background: #fff; border-radius: 18px; padding: 12px 6px; text-align: center; box-shadow: 0 5px 14px rgba(60,50,150,.08); }
+.statgrid b { display: block; font: 800 22px var(--font-num); color: var(--main); }
+.statgrid span { font-size: 12px; color: var(--gray); font-weight: 700; }
+table.rec { width: 100%; border-collapse: collapse; font-size: 13px; font-variant-numeric: tabular-nums; }
+table.rec th, table.rec td { padding: 7px 4px; border-bottom: 1px solid var(--line); text-align: right; }
+table.rec th:first-child, table.rec td:first-child { text-align: left; }
+table.rec th { color: var(--gray); font-weight: 700; font-size: 12px; }
+td.over { color: var(--red); font-weight: 900; }
+.badgegrid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.bcell { background: #fff; border-radius: 20px; padding: 10px 6px 12px; text-align: center; box-shadow: 0 5px 14px rgba(60,50,150,.08); display: grid; gap: 4px; justify-items: center; }
+.bcell svg { width: 82px; height: 82px; }
+.bcell b { font-size: 12.5px; font-weight: 900; line-height: 1.3; }
+.bcell small { font-size: 11px; color: var(--gray); line-height: 1.3; }
+.bcell.lock svg { filter: grayscale(1); opacity: .35; }
+.bcell.new { animation: pop .5s both; box-shadow: 0 0 0 3px var(--yellow), 0 5px 14px rgba(60,50,150,.08); }
+.wallet { background: linear-gradient(135deg, var(--yellow), #ffa62b); border-radius: 26px; padding: 18px 20px; color: var(--ink); position: relative; overflow: hidden; box-shadow: 0 14px 26px rgba(252,160,16,.35); }
+.wallet small { font-weight: 900; font-size: 13px; }
+.wallet b { display: flex; align-items: center; gap: 8px; font: 800 42px/1.1 var(--font-num); }
+.wallet b .coin { width: 34px; height: 34px; }
+.wallet .ring { position: absolute; right: -30px; top: -30px; width: 140px; height: 140px; border-radius: 50%; border: 22px solid rgba(255,255,255,.25); }
+.hist { background: #fff; border-radius: 20px; padding: 4px 14px; }
+.hist div { display: flex; justify-content: space-between; padding: 9px 0; border-bottom: 1px solid var(--line); font-size: 13.5px; }
+.hist div:last-child { border-bottom: 0; }
+.hist b { font: 700 13.5px var(--font-num); color: var(--green-deep); }
+.hist b.neg { color: var(--red); }
+.shop { display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; gap: 12px; align-items: center; background: #fff; border-radius: 20px; padding: 10px 12px; box-shadow: 0 5px 14px rgba(60,50,150,.08); }
+.shop .lg { width: 56px; height: 56px; border-radius: 16px; display: grid; place-items: center; font: 400 22px var(--font-round); color: #fff; }
+.shop .nm { font-weight: 900; font-size: 14.5px; }
+.shop small { color: var(--gray); font-size: 12px; }
+.shop button { background: var(--main); color: #fff; font-weight: 900; font-size: 13px; padding: 8px 12px; border-radius: 12px; }
+.shop button:disabled { background: #d6d6e2; cursor: default; }
+.empty { text-align: center; color: var(--gray); font-size: 14px; padding: 18px; background: #fff; border-radius: 20px; }
+
+/* fx */
+.fx { position: absolute; inset: 0; z-index: 50; pointer-events: none; width: 100%; height: 100%; }
+.flycoin { position: absolute; z-index: 60; pointer-events: none; transition: transform .8s cubic-bezier(.5,-.3,.6,1), opacity .8s; }
+.toast { position: absolute; z-index: 70; left: 50%; top: 44px; transform: translate(-50%, -20px); background: var(--ink); color: #fff; padding: 9px 16px; border-radius: 999px; font-size: 13.5px; font-weight: 700; opacity: 0; transition: opacity .25s, transform .25s; pointer-events: none; white-space: nowrap; max-width: 90%; overflow: hidden; text-overflow: ellipsis; }
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+.bump { animation: bump .5s; }
+@keyframes bump { 40% { transform: scale(1.3); } }
+
+@media (max-width: 920px) {
+  .stage { grid-template-columns: minmax(0, 1fr); justify-items: center; gap: 28px; }
+  .panel { order: 2; width: 100%; max-width: 560px; }
+  .phone { order: 1; }
+}
+@media (max-width: 460px) {
+  body { padding-block: 10px; }
+  .phone { width: 100%; border-width: 6px; border-radius: 34px; height: calc(100dvh - 20px); min-height: 620px; }
+  .brand h1 { font-size: 34px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
+</style>
+</head>
+<body>
+
+
+<div class="stage">
+  <section class="panel" aria-label="簡報講稿">
+    <div class="brand">
+      <div class="eyebrow">115 年新竹政策黑客松 · 主題二 智遊風城</div>
+      <h1>竹跡 <b>ChuTrace</b></h1>
+      <p>把你在新竹的空檔，變成走得完的城市探索。右邊的手機可以直接操作，左邊是三分鐘示範的講稿，點任一步可直接跳過去。</p>
+    </div>
+    <ol class="steps" id="steps"></ol>
+    <div class="panel-actions">
+      <button class="ghost primary" type="button" data-act="auto">下一步 →</button>
+      <button class="ghost" type="button" data-act="reset">從頭開始</button>
+    </div>
+    <div class="bounds">
+      <div class="eyebrow">DEMO 界線（評審問到時這樣說）</div>
+      <ul>
+        <li><b>景點、步行與停留時間是示意資料</b>，正式版要實地走過並記錄核對日期。</li>
+        <li><b>超時情境是人工設定的模擬</b>，畫面上有標示，不是即時事件。</li>
+        <li><b>對話中的 AI 解析</b>在 Demo 以關鍵字模擬；正式版由 LLM 理解偏好、改寫經核對的導覽，時間與路線由程式檢查。</li>
+        <li><b>店家兌換</b>只展示流程，目前沒有合作店家。地圖為示意插畫，非實際比例。</li>
+      </ul>
+    </div>
+  </section>
+
+  <div class="phone" id="phone" aria-label="竹跡 App 原型">
+    <div class="status" id="status"><span><span id="clock">14:00</span><span class="sim">模擬時間</span></span><span>5G ▮▮▮</span></div>
+    <div class="app" id="app">
+      <div class="view" id="view"></div>
+      <nav class="tabbar" id="tabbar" aria-label="主選單"></nav>
+      <div id="modal"></div>
+      <canvas class="fx" id="fx"></canvas>
+      <div class="toast" id="toast" role="status"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  'use strict';
+  const START = 14 * 60, DELAY = 15;
+  const RM = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  // ---------- icons ----------
+  const P = {
+    home: '<path d="M3 11l9-7 9 7v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
+    map: '<path d="M9 4 3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14"/>',
+    medal: '<circle cx="12" cy="15" r="5.5"/><path d="M8.5 3h7l-2 6.5h-3zM12 13v4"/>',
+    coin: '<circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="4.5"/>',
+    back: '<path d="M15 5l-7 7 7 7"/>',
+    chat: '<path d="M4 5h16v11H9l-5 4z"/><path d="M8 10h8"/>',
+    pin: '<path d="M12 21s-6.5-5.6-6.5-11.2a6.5 6.5 0 0 1 13 0C18.5 15.4 12 21 12 21z"/><circle cx="12" cy="10" r="2.3"/>',
+    clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3.5 2"/>',
+    walk: '<circle cx="13" cy="4.5" r="1.8"/><path d="M9.5 21l2.6-6.2 2.6 2.4V21M10 10l3-2.2 2.2 4.3 3 1.4M10 10l-1.8 4.3"/>',
+    flag: '<path d="M5 21V4h11l-2.2 4L16 12H5"/>',
+    star: '<path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1 5.8L12 16.9l-5.2 2.7 1-5.8L3.5 9.7l5.9-.8z" fill="currentColor" stroke="none"/>',
+    bulb: '<path d="M9 18h6M10 21h4M12 3a6 6 0 0 0-3.6 10.8c.7.5 1.1 1.3 1.1 2.2h5c0-.9.4-1.7 1.1-2.2A6 6 0 0 0 12 3z"/>',
+    headset: '<path d="M4 15v-3a8 8 0 0 1 16 0v3"/><path d="M4 14h3v6H5a1 1 0 0 1-1-1zM20 14h-3v6h2a1 1 0 0 0 1-1z"/>',
+    bag: '<path d="M5 8h14l-1.2 12.5H6.2z"/><path d="M9 8V6.5a3 3 0 0 1 6 0V8"/>',
+    locate: '<circle cx="12" cy="12" r="3"/><circle cx="12" cy="12" r="8"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2"/>',
+    plus: '<path d="M12 5v14M5 12h14"/>',
+    minus: '<path d="M5 12h14"/>',
+    send: '<path d="M4 12 20 4l-6 16-2.5-6.5z"/>',
+    close: '<path d="M6 6l12 12M18 6 6 18"/>',
+    share: '<circle cx="18" cy="5.5" r="2.5"/><circle cx="6" cy="12" r="2.5"/><circle cx="18" cy="18.5" r="2.5"/><path d="M8.3 10.8l7.4-4M8.3 13.2l7.4 4"/>',
+    chev: '<path d="M9 6l6 6-6 6"/>',
+    down: '<path d="M6 9l6 6 6-6"/>',
+    check: '<path d="M5 12.5l4.5 4.5L19 7"/>',
+    route: '<circle cx="6" cy="19" r="2.2"/><circle cx="18" cy="5" r="2.2"/><path d="M8.2 19H15a3.2 3.2 0 0 0 0-6.4H9a3.2 3.2 0 0 1 0-6.4h6.8"/>',
+    sparkle: '<path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/>',
+    bus: '<rect x="5" y="3.5" width="14" height="14" rx="3"/><path d="M5 11h14M8 21v-3.5M16 21v-3.5"/>',
+    gift: '<rect x="4" y="9" width="16" height="11" rx="1.5"/><path d="M12 9v11M3 9h18M12 9C10 5 7 5 7 7s3 2 5 2c2 0 5 0 5-2s-3-2-5 2"/>'
+  };
+  const ic = (n, cls) => `<svg class="ic ${cls || ''}" viewBox="0 0 24 24" aria-hidden="true">${P[n]}</svg>`;
+
+  // ---------- data ----------
+  const PLACES = {
+    station: { name: '新竹火車站', short: '新竹車站', x: 760, y: 845 },
+    dongmen: {
+      name: '東門城（迎曦門）', short: '東門城', x: 560, y: 540, task: 12, quick: 6, tags: ['老建築'], glyph: '曦', color: '#e0483b', badge: '迎曦守門人',
+      why: '竹塹城唯一留下的城門，離車站最近，適合當第一站。',
+      facts: [['完工', '1829 年（清道光九年）'], ['看點', '石砌城門、城樓'], ['任務', '現地觀察題']],
+      story: '竹塹城在 1829 年完成磚石城牆，原本有四座城門。東門「迎曦門」是現在唯一保留下來的一座。聽說城門附近還藏著一顆竹筍彩蛋……',
+      quiz: { q: '看看城門旁的解說牌，東門的正式名稱是？', opts: ['迎曦門', '拱宸門', '挹爽門', '歌薰門'], a: 0, hint: '「曦」是早晨的陽光，東邊最先看到太陽。' }
+    },
+    film: {
+      name: '新竹市影像博物館', short: '影像博物館', x: 440, y: 395, task: 15, quick: 6, tags: ['老建築', '文化館'], glyph: '影', color: '#6a5cf0', badge: '有樂館影迷',
+      why: '1933 年的老戲院建築，從東門城走過去只要幾分鐘。',
+      facts: [['落成', '1933 年'], ['原名', '有樂館'], ['任務', '立面觀察題']],
+      story: '這棟建築 1933 年落成，原名「有樂館」，後來改成影像博物館。站在門口，看看立面的線條和窗戶。',
+      quiz: { q: '這棟建築最早是做什麼用的？', opts: ['戲院', '銀行', '郵局', '倉庫'], a: 0, hint: '它原本的名字叫「有樂館」。' }
+    },
+    temple: {
+      name: '新竹都城隍廟', short: '城隍廟', x: 250, y: 565, task: 20, quick: 8, tags: ['在地小吃', '廟宇'], glyph: '廟', color: '#c05757', badge: '城隍廟小吃家',
+      why: '你說最後想吃在地小吃，廟口周邊就是米粉、貢丸的老攤位。',
+      facts: [['興建', '1748 年（清乾隆十三年）'], ['看點', '光緒御賜匾額'], ['順便', '廟口米粉、貢丸']],
+      story: '新竹都城隍廟建於 1748 年。廟裡有一塊清光緒皇帝御賜的匾額，廟口就是新竹小吃的集散地。',
+      quiz: { q: '找到光緒皇帝御賜的匾額，上面寫的四個字是？', opts: ['金門保障', '威靈顯赫', '正直聰明', '神光普照'], a: 0, hint: '跟「守護城門」有關。' }
+    },
+    moat: {
+      name: '護城河親水公園', short: '護城河', x: 668, y: 668, task: 6, quick: 4, tags: ['散步'], glyph: '河', color: '#3a8fd0', badge: '護城河散步者',
+      why: '就在回車站的路上，花幾分鐘就能看完。',
+      facts: [['前身', '竹塹城護城河'], ['看點', '水岸步道'], ['任務', '現地觀察題']],
+      story: '竹塹城的護城河曾經環繞城牆。整治之後，東門城一帶變成可以沿著水岸散步的親水公園。',
+      quiz: { q: '東門城外這段護城河，整治後變成什麼樣的空間？', opts: ['親水公園', '停車場', '馬路', '市場'], a: 0, hint: '你現在就站在它旁邊。' }
+    }
+  };
+  const DECO = [
+    { name: '新竹州廳', x: 330, y: 250 },
+    { name: '北門街老街', x: 170, y: 330 },
+    { name: '玻璃工藝博物館', x: 900, y: 360 }
+  ];
+  const W = { 'station-dongmen': 7, 'station-film': 9, 'station-temple': 11, 'station-moat': 8, 'dongmen-film': 4, 'dongmen-temple': 8, 'dongmen-moat': 2, 'film-temple': 9, 'film-moat': 3, 'temple-moat': 7 };
+  const walk = (a, b) => (a === b ? 0 : W[a + '-' + b] ?? W[b + '-' + a]);
+  const ROUTES = { 60: ['dongmen', 'film'], 90: ['dongmen', 'film', 'temple'], 120: ['dongmen', 'film', 'temple', 'moat'] };
+  const BADGES = [
+    { id: 'dongmen', name: '迎曦守門人', glyph: '曦', color: '#e0483b', how: '完成東門城任務' },
+    { id: 'film', name: '有樂館影迷', glyph: '影', color: '#6a5cf0', how: '完成影像博物館任務' },
+    { id: 'temple', name: '城隍廟小吃家', glyph: '廟', color: '#c05757', how: '完成城隍廟任務' },
+    { id: 'moat', name: '護城河散步者', glyph: '河', color: '#3a8fd0', how: '完成護城河任務' },
+    { id: 'egg', name: '彩蛋獵人', glyph: '筍', color: '#e0a000', how: '找到隱藏的竹筍彩蛋' },
+    { id: 'ontime', name: '準時回站', glyph: '時', color: '#2f9a44', how: '在回程時間前回到車站' },
+    { id: 'all', name: '竹塹舊城探索者', glyph: '竹', color: '#2f7a3f', how: '走完一整條探索路線' },
+    { id: 'night', name: '夜訪竹塹', glyph: '夜', color: '#363a6f', how: '即將推出' },
+    { id: 'glass', name: '玻璃工藝線', glyph: '璃', color: '#22a3b8', how: '即將推出' }
+  ];
+  const STEPS = [
+    { t: '情境', s: '旅客剛到新竹車站，回程火車 15:30，只剩 90 分鐘，對新竹不熟。這是主頁，點上方的對話列找小竹。' },
+    { t: '跟小竹對話', s: '用對話說需求，可以點選也可以打字。小竹先問限制：時間、同行對象、想看什麼、怎麼移動。' },
+    { t: 'AI 生成路線', s: 'AI 理解需求、挑景點、寫推薦理由；時間由程式計算，最後保留回程緩衝。可以直接切換 60／90／120 分鐘看路線怎麼變。' },
+    { t: '走到第一站', s: '地圖可以拖曳、縮放。按「開始步行」，人物沿路線走，時間跟著跑。GPS 只當提示，完成靠現場題目。' },
+    { t: '現地挑戰', s: '到點先看故事（可跳過），再答一題看現場才答得出來的題目。可以朗讀、用提示；城門畫面裡藏了一顆彩蛋。' },
+    { t: '途中重排', s: '模擬情境：在影像博物館多待了 15 分鐘。照原計畫會趕不上火車，系統提出能準時回站的方案，並把超時方案擋下來。' },
+    { t: '完成與獎勵', s: '回到車站拿徽章。探索紀錄裡「預估 vs 實際」的停留時間，就是場域測試要收集的資料。徽章與竹跡幣分頁也可以點。' }
+  ];
+
+  // ---------- state ----------
+  let S;
+  function fresh() {
+    return {
+      view: 'home', tab: 'home', prefs: { time: 90, who: '朋友', mode: '步行', interests: ['老建築', '在地小吃'], limits: [] },
+      chat: { step: 0, msgs: [], typing: false, picks: [] }, trip: null, coins: 0, hist: [], badges: [], newBadges: [],
+      me: { x: PLACES.station.x, y: PLACES.station.y }, sheetOpen: false, focus: null, quiz: null, modal: null, speed: 1, egg: false, banner: 0
+    };
+  }
+  S = fresh();
+  const $ = (id) => document.getElementById(id);
+  const fmt = (m) => String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
+  const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+  const T = () => S.trip;
+  const deadline = () => START + S.prefs.time;
+  const delayIdx = () => (T().route.length >= 3 ? 1 : 0);
+  const taskOf = (id) => T().override[id] ?? PLACES[id].task;
+  const here = () => (T().idx > 0 ? T().route[T().idx - 1] : 'station');
+  const clockNow = () => (T() ? T().clock : START);
+  const status = (b) => (b < 0 ? 'fail' : b < 5 ? 'tight' : 'ok');
+
+  function schedule(from, stops, clock, override) {
+    const items = []; let t = clock, prev = from;
+    for (const id of stops) {
+      const w = walk(prev, id), task = override?.[id] ?? PLACES[id].task;
+      items.push({ id, w, arrive: t + w, task }); t += w + task; prev = id;
+    }
+    const back = walk(prev, 'station');
+    return { items, back, end: t + back, buffer: deadline() - (t + back) };
+  }
+  function parse(text) {
+    const r = { interests: [], limits: [] };
+    if (/老|建築|古蹟|歷史|城門/.test(text)) r.interests.push('老建築');
+    if (/吃|小吃|美食|米粉|貢丸/.test(text)) r.interests.push('在地小吃');
+    if (/博物館|展|文化|藝術|電影/.test(text)) r.interests.push('文化館');
+    if (/拍|照|IG/.test(text)) r.interests.push('拍照');
+    if (/不想走太遠|走太多|不想走|輕鬆|累/.test(text)) r.limits.push('每段步行 ≤ 10 分');
+    if (/60|一小時|一個小時/.test(text)) r.time = 60;
+    if (/90|一個半|一小時半/.test(text)) r.time = 90;
+    if (/120|兩小時|兩個小時/.test(text)) r.time = 120;
+    if (/家人|小孩|爸媽|家庭/.test(text)) r.who = '家庭';
+    if (/公車/.test(text)) r.mode = '公車';
+    if (/youbike|腳踏車|單車/i.test(text)) r.mode = 'YouBike';
+    return r;
+  }
+  function newTrip() {
+    S.trip = { route: ROUTES[S.prefs.time].slice(), idx: 0, stage: 'ready', clock: START, log: [], override: {}, delayed: false, backWalk: 0, choice: null, walkP: 0 };
+    S.me = { x: PLACES.station.x, y: PLACES.station.y };
+  }
+
+  // ---------- coins / badges ----------
+  function addCoins(n, label, fromEl) {
+    S.coins += n; S.hist.unshift({ n, label, t: fmt(clockNow()) });
+    if (fromEl && !RM) flyCoins(fromEl, Math.min(6, Math.max(2, Math.round(n / 2))));
+    setTimeout(() => { const p = document.querySelector('[data-coins]'); if (p) { p.textContent = S.coins; p.parentElement.classList.remove('bump'); void p.offsetWidth; p.parentElement.classList.add('bump'); } }, RM ? 0 : 750);
+  }
+  function giveBadge(id) { if (!S.badges.includes(id)) { S.badges.push(id); S.newBadges.push(id); } }
+  function flyCoins(fromEl, n) {
+    const app = $('app').getBoundingClientRect();
+    const target = document.querySelector('[data-coins]') || $('tabbar');
+    const f = fromEl.getBoundingClientRect(), t = target.getBoundingClientRect();
+    for (let i = 0; i < n; i++) {
+      const c = document.createElement('i'); c.className = 'coin flycoin';
+      c.style.left = (f.left - app.left + f.width / 2 - 9 + (Math.random() * 40 - 20)) + 'px';
+      c.style.top = (f.top - app.top + f.height / 2 - 9) + 'px';
+      $('app').appendChild(c);
+      const dx = t.left - f.left - f.width / 2 + t.width / 2 + 0, dy = t.top - f.top - f.height / 2 + t.height / 2;
+      setTimeout(() => { c.style.transform = `translate(${dx}px, ${dy}px) scale(.6)`; c.style.opacity = '.2'; }, 30 + i * 70);
+      setTimeout(() => c.remove(), 1000 + i * 70);
+    }
+  }
+  // confetti
+  let confettiParts = [], confettiRAF = 0;
+  function confetti() {
+    if (RM) return;
+    const cv = $('fx'), r = cv.getBoundingClientRect(); cv.width = r.width * 2; cv.height = r.height * 2;
+    const ctx = cv.getContext('2d'); const cols = ['#6a5cf0', '#fcbc10', '#8fd17a', '#e09a99', '#3a8fd0', '#ffffff'];
+    for (let i = 0; i < 140; i++) confettiParts.push({ x: cv.width / 2 + (Math.random() - .5) * 120, y: cv.height * .35, vx: (Math.random() - .5) * 26, vy: -Math.random() * 26 - 8, s: 8 + Math.random() * 10, r: Math.random() * 6, vr: (Math.random() - .5) * .4, c: cols[i % cols.length], life: 0 });
+    cancelAnimationFrame(confettiRAF);
+    const tick = () => {
+      ctx.clearRect(0, 0, cv.width, cv.height);
+      confettiParts.forEach((p) => { p.vy += .9; p.vx *= .985; p.x += p.vx; p.y += p.vy; p.r += p.vr; p.life++;
+        ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r); ctx.fillStyle = p.c; ctx.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2); ctx.restore(); });
+      confettiParts = confettiParts.filter((p) => p.y < cv.height + 40 && p.life < 240);
+      if (confettiParts.length) confettiRAF = requestAnimationFrame(tick); else ctx.clearRect(0, 0, cv.width, cv.height);
+    };
+    tick();
+  }
+  let toastT;
+  function toast(msg) { const t = $('toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 2000); }
+
+  // ---------- illustrations ----------
+  function sky(id, a, b) { return `<defs><linearGradient id="sk${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${a}"/><stop offset="1" stop-color="${b}"/></linearGradient></defs><rect width="400" height="260" fill="url(#sk${id})"/>`; }
+  const cloud = (x, y, s) => `<g fill="#fff" opacity=".9"><ellipse cx="${x}" cy="${y}" rx="${26 * s}" ry="${11 * s}"/><ellipse cx="${x + 16 * s}" cy="${y - 8 * s}" rx="${16 * s}" ry="${12 * s}"/><ellipse cx="${x - 12 * s}" cy="${y - 5 * s}" rx="${12 * s}" ry="${9 * s}"/></g>`;
+  const tree = (x, y, s, c) => `<g><rect x="${x - 3 * s}" y="${y}" width="${6 * s}" height="${22 * s}" rx="2" fill="#7a5a3a"/><circle cx="${x}" cy="${y - 4 * s}" r="${18 * s}" fill="${c || '#5cb85c'}"/><circle cx="${x - 10 * s}" cy="${y + 4 * s}" r="${12 * s}" fill="${c || '#5cb85c'}"/><circle cx="${x + 11 * s}" cy="${y + 3 * s}" r="${13 * s}" fill="${c || '#4fae55'}"/></g>`;
+  function scene(id, uid, opt) {
+    uid = uid || id;
+    const o = opt || {};
+    let s = `<svg class="scene" viewBox="0 0 400 260" preserveAspectRatio="xMidYMid slice" aria-hidden="true">`;
+    if (id === 'dongmen') {
+      s += sky(uid, '#8fd0ff', '#e3f4ff') + `<circle cx="330" cy="56" r="24" fill="#ffd54a"/>` + cloud(90, 60, 1.1) + cloud(250, 40, .8)
+        + `<rect y="205" width="400" height="55" fill="#8fd17a"/><ellipse cx="200" cy="232" rx="210" ry="20" fill="#c9c3b5"/>`
+        + tree(40, 180, 1.2) + tree(368, 176, 1.3, '#4fae55')
+        + `<rect x="110" y="128" width="180" height="92" fill="#cdbb9c"/>`
+        + Array.from({ length: 6 }, (_, i) => `<path d="M110 ${140 + i * 14}H290" stroke="#b5a383" stroke-width="2"/>`).join('')
+        + Array.from({ length: 12 }, (_, i) => `<path d="M${118 + i * 15 + (i % 2) * 7} 128V220" stroke="#b5a383" stroke-width="1.4" opacity=".6"/>`).join('')
+        + `<path d="M172 220V180a28 28 0 0 1 56 0v40z" fill="#4a3a2e"/><path d="M178 220V182a22 22 0 0 1 44 0v38" fill="#2e241c"/>`
+        + `<rect x="104" y="120" width="192" height="10" fill="#b8a684"/>`
+        + `<rect x="140" y="84" width="120" height="38" fill="#c0392b"/>` + [150, 174, 198, 222, 246].map((x) => `<rect x="${x}" y="84" width="6" height="38" fill="#8e2a1f"/>`).join('')
+        + `<rect x="176" y="92" width="48" height="16" rx="2" fill="#2b2b2b"/><text x="200" y="104.5" text-anchor="middle" font-size="11" fill="#ffd54a" style="font-family:var(--font-round)">迎曦</text>`
+        + `<path d="M112 88 Q130 70 150 66 H250 Q270 70 288 88 Q300 90 306 82 L298 96 H102 L94 82 Q100 90 112 88Z" fill="#3d3550"/>`
+        + `<path d="M140 66 Q200 48 260 66" stroke="#3d3550" stroke-width="8" fill="none"/><circle cx="200" cy="54" r="5" fill="#ffd54a"/>`;
+      if (o.egg) s += `<g class="egg" data-act="egg" role="button" aria-label="竹筍彩蛋"><path d="M352 222 Q358 196 364 222Z" fill="#e8b04a"/><path d="M348 224 Q358 204 368 224Z" fill="#c98b2a"/><path d="M352 224 L358 212 L364 224" fill="none" stroke="#9a6a1c" stroke-width="1.5"/><circle cx="358" cy="214" r="18" fill="transparent"/></g>`;
+    } else if (id === 'film') {
+      s += sky(uid, '#b6c8ff', '#eef1ff') + cloud(320, 50, 1) + cloud(70, 36, .7)
+        + `<rect y="214" width="400" height="46" fill="#cfc6b6"/><rect y="210" width="400" height="6" fill="#b4aa98"/>`
+        + `<rect x="80" y="86" width="240" height="128" fill="#f1e2c2"/><rect x="160" y="52" width="80" height="162" fill="#f6ead0"/>`
+        + `<rect x="160" y="52" width="80" height="8" fill="#d9c49c"/><rect x="80" y="86" width="240" height="8" fill="#d9c49c"/>`
+        + [172, 188, 204, 220].map((x) => `<rect x="${x}" y="68" width="8" height="66" rx="4" fill="#d9c49c"/>`).join('')
+        + [96, 124, 262, 290].map((x) => `<path d="M${x} 150v-24a10 10 0 0 1 20 0v24z" fill="#5b6fa8"/>`).join('')
+        + [96, 124, 262, 290].map((x) => `<rect x="${x}" y="166" width="20" height="26" rx="2" fill="#5b6fa8"/>`).join('')
+        + `<rect x="168" y="146" width="64" height="16" rx="3" fill="#6a5cf0"/><text x="200" y="158" text-anchor="middle" font-size="10" fill="#fff" style="font-family:var(--font-round)">影像博物館</text>`
+        + `<path d="M176 214v-36a24 24 0 0 1 48 0v36z" fill="#a33b2f"/><path d="M200 214v-60" stroke="#7a2a20" stroke-width="2"/>`
+        + `<g stroke="#4a4a5a" stroke-width="3"><path d="M48 214V150"/><path d="M352 214V150"/></g><circle cx="48" cy="146" r="7" fill="#ffd54a"/><circle cx="352" cy="146" r="7" fill="#ffd54a"/>`;
+    } else if (id === 'temple') {
+      s += sky(uid, '#ffc48a', '#ffecd6') + `<circle cx="70" cy="60" r="22" fill="#ffe08a"/>` + cloud(300, 46, .9)
+        + `<rect y="210" width="400" height="50" fill="#d8c3a5"/>`
+        + `<rect x="96" y="120" width="208" height="92" fill="#b03a2e"/><rect x="96" y="120" width="208" height="10" fill="#8e2a1f"/>`
+        + `<path d="M176 212v-50h48v50z" fill="#3a2418"/><path d="M200 162v50" stroke="#ffd54a" stroke-width="2"/>`
+        + `<rect x="178" y="134" width="44" height="18" rx="2" fill="#1f1f1f"/><text x="200" y="147.5" text-anchor="middle" font-size="10" fill="#ffd54a" style="font-family:var(--font-round)">城隍廟</text>`
+        + `<path d="M70 122 Q86 96 120 92 H280 Q314 96 330 122 Q342 120 346 108 L338 128 H62 L54 108 Q58 120 70 122Z" fill="#2f6f4f"/>`
+        + `<path d="M110 92 Q200 70 290 92" stroke="#2f6f4f" stroke-width="10" fill="none"/>`
+        + `<path d="M100 88 q-12 -20 -2 -30 M300 88 q12 -20 2 -30" stroke="#2f6f4f" stroke-width="6" fill="none" stroke-linecap="round"/>`
+        + `<circle cx="200" cy="74" r="8" fill="#ffd54a"/><path d="M160 80 h80" stroke="#ffd54a" stroke-width="3"/>`
+        + [128, 272].map((x) => `<g><path d="M${x} 130v8" stroke="#3a2418" stroke-width="2"/><ellipse cx="${x}" cy="148" rx="10" ry="12" fill="#e0483b"/><path d="M${x - 10} 148h20" stroke="#ffd54a" stroke-width="2"/></g>`).join('')
+        + `<rect x="300" y="186" width="80" height="28" rx="4" fill="#fff4d1"/><rect x="296" y="178" width="88" height="10" rx="4" fill="#e0483b"/><text x="340" y="205" text-anchor="middle" font-size="11" fill="#7a5600" style="font-family:var(--font-round)">米粉 貢丸</text>`
+        + `<path d="M326 176 q-6 -10 0 -18 q6 -8 0 -16 M346 176 q-6 -10 0 -18 q6 -8 0 -16" stroke="#fff" stroke-width="3" fill="none" opacity=".8"/>`;
+    } else if (id === 'moat') {
+      s += sky(uid, '#a6e1ff', '#effaff') + cloud(110, 50, 1) + cloud(300, 66, .8)
+        + `<rect y="150" width="400" height="110" fill="#8fd17a"/><path d="M0 190 Q100 170 200 190 T400 186 V236 Q300 222 200 238 T0 232Z" fill="#5fb6e6"/>`
+        + `<path d="M30 206 q14 -5 28 0 M140 214 q14 -5 28 0 M260 206 q14 -5 28 0" stroke="#fff" stroke-width="2.5" fill="none" opacity=".7"/>`
+        + `<path d="M140 196 Q200 150 260 196" stroke="#cdbb9c" stroke-width="12" fill="none"/><path d="M140 196 Q200 158 260 196" stroke="#b5a383" stroke-width="2" fill="none"/>`
+        + [160, 180, 200, 220, 240].map((x) => `<path d="M${x} ${180 - Math.abs(200 - x) * -.2 - 8}v-12" stroke="#8a7a60" stroke-width="2.5"/>`).join('')
+        + tree(56, 140, 1.3, '#4fae55') + tree(346, 134, 1.4)
+        + `<path d="M300 128 q-6 30 -2 60 M310 128 q0 30 6 58 M320 128 q6 30 12 56" stroke="#3f8f4a" stroke-width="3" fill="none"/>`;
+    } else {
+      s += sky(uid, '#9fd2ff', '#eaf5ff') + cloud(80, 46, 1) + cloud(320, 38, .8)
+        + `<rect y="212" width="400" height="48" fill="#d6d0c4"/><path d="M0 236 H400" stroke="#8a8a9a" stroke-width="3" stroke-dasharray="14 8"/>`
+        + `<rect x="70" y="110" width="260" height="102" fill="#efe3c8"/><rect x="164" y="56" width="72" height="156" fill="#f4ead6"/>`
+        + `<path d="M156 60 L200 30 L244 60Z" fill="#7a7f95"/><circle cx="200" cy="84" r="16" fill="#fff" stroke="#7a7f95" stroke-width="4"/><path d="M200 84v-10M200 84l7 4" stroke="#333" stroke-width="2.5" stroke-linecap="round"/>`
+        + `<path d="M62 114 H338 L330 104 H70Z" fill="#7a7f95"/>`
+        + [86, 116, 258, 288].map((x) => `<path d="M${x} 196v-34a12 12 0 0 1 24 0v34z" fill="#5b6fa8"/>`).join('')
+        + `<path d="M178 212v-48a22 22 0 0 1 44 0v48z" fill="#5b6fa8"/>`;
+    }
+    return s + '</svg>';
+  }
+  function badgeSVG(b, size) {
+    const id = 'bp' + b.id + (size || '');
+    return `<svg viewBox="0 0 160 160" aria-hidden="true">
+      <defs><path id="${id}t" d="M30 80 A50 50 0 0 1 130 80"/><path id="${id}b" d="M26 82 A54 54 0 0 0 134 82"/></defs>
+      <circle cx="80" cy="80" r="76" fill="#f7e5c4"/><circle cx="80" cy="80" r="68" fill="none" stroke="${b.color}" stroke-width="5"/>
+      <circle cx="80" cy="80" r="60" fill="none" stroke="${b.color}" stroke-width="1.5" stroke-dasharray="2 5"/>
+      <text font-size="15" fill="${b.color}" style="font-family:var(--font-round)" letter-spacing="2"><textPath href="#${id}t" startOffset="50%" text-anchor="middle">${b.name}</textPath></text>
+      <circle cx="80" cy="88" r="28" fill="${b.color}"/>
+      <text x="80" y="99" text-anchor="middle" font-size="32" fill="#fff" style="font-family:var(--font-round)">${b.glyph}</text>
+      <text font-size="11" fill="${b.color}" style="font-family:var(--font-num);font-weight:700" letter-spacing="3"><textPath href="#${id}b" startOffset="50%" text-anchor="middle">CHUTRACE</textPath></text>
+    </svg>`;
+  }
+  const guideSVG = (w) => `<svg viewBox="0 0 56 72" width="${w || 52}" height="${(w || 52) * 72 / 56}" aria-hidden="true">
+    <ellipse cx="28" cy="69" rx="16" ry="3" fill="rgba(0,0,0,.12)"/>
+    <rect x="11" y="10" width="34" height="58" rx="15" fill="#3fae5a"/><rect x="11" y="38" width="34" height="4" fill="#2f8f48"/>
+    <path d="M40 15 C52 2 57 10 54 17 C49 14 45 16 40 19Z" fill="#6cc96f"/><path d="M16 14 C8 4 3 9 5 15 C9 13 12 15 16 17Z" fill="#6cc96f"/>
+    <circle cx="21" cy="25" r="4.2" fill="#fff"/><circle cx="35" cy="25" r="4.2" fill="#fff"/>
+    <circle cx="22" cy="25.8" r="2.2" fill="#22213a"/><circle cx="36" cy="25.8" r="2.2" fill="#22213a"/>
+    <circle cx="17" cy="32" r="2.6" fill="#ff9a9a" opacity=".7"/><circle cx="39" cy="32" r="2.6" fill="#ff9a9a" opacity=".7"/>
+    <path d="M24 31 Q28 35 32 31" stroke="#fff" stroke-width="2.2" fill="none" stroke-linecap="round"/></svg>`;
+
+  // ---------- map ----------
+  function legPath(a, b) {
+    const A = PLACES[a], B = PLACES[b];
+    const mx = (A.x + B.x) / 2, my = (A.y + B.y) / 2, dx = B.x - A.x, dy = B.y - A.y, L = Math.hypot(dx, dy) || 1;
+    const cx = mx - dy / L * 34, cy = my + dx / L * 34;
+    return `M${A.x} ${A.y} Q${cx} ${cy} ${B.x} ${B.y}`;
+  }
+  let MAPBASE = '';
+  function mapBase() {
+    if (MAPBASE) return MAPBASE;
+    let s = `<rect width="1000" height="1000" fill="#f3ecd9"/>`;
+    // blocks
+    const blocks = [[80, 80, 180, 120], [300, 90, 200, 110], [560, 70, 160, 150], [760, 90, 180, 170], [70, 240, 150, 150], [620, 260, 130, 130], [790, 300, 160, 140],
+      [60, 640, 140, 150], [330, 620, 170, 120], [420, 780, 200, 110], [820, 560, 140, 140], [110, 430, 80, 90]];
+    blocks.forEach(([x, y, w, h], i) => { s += `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="22" fill="${['#ebe1c8', '#e6dbc0', '#efe6cf'][i % 3]}"/>`; });
+    for (let i = 0; i < 40; i++) { const x = (i * 211) % 940 + 30, y = (i * 137) % 900 + 40; s += `<rect x="${x}" y="${y}" width="${22 + (i % 3) * 8}" height="${18 + (i % 4) * 6}" rx="4" fill="#ddd0b0" opacity=".7"/>`; }
+    // parks
+    s += `<path d="M640 470 q60 -30 110 10 q30 50 -10 90 q-60 30 -100 -10 q-30 -50 0 -90z" fill="#bfe3a5"/>`;
+    s += `<path d="M120 760 q70 -40 140 0 q20 60 -40 90 q-90 20 -110 -30z" fill="#bfe3a5"/>`;
+    // moat
+    s += `<path d="M360 720 C 450 790, 640 800, 700 690 S 700 480, 610 430 S 470 440, 450 480" stroke="#8fcbea" stroke-width="30" fill="none" stroke-linecap="round"/>`;
+    s += `<path d="M360 720 C 450 790, 640 800, 700 690 S 700 480, 610 430 S 470 440, 450 480" stroke="#b9e1f3" stroke-width="10" fill="none" stroke-linecap="round" stroke-dasharray="2 22"/>`;
+    // roads
+    const road = (d, w) => `<path d="${d}" stroke="#fffaf0" stroke-width="${w}" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
+    s += [`M800 900 L560 540 L440 395 L300 200`, `M60 600 L560 540 L960 470`, `M250 960 L250 565 L230 200`, `M440 395 L250 565`, `M560 540 L668 668 L760 845`, `M90 250 L960 260`, `M960 700 L668 668 L330 690`]
+      .map((d, i) => `<path d="${d}" stroke="#e2d5b4" stroke-width="${i === 0 ? 46 : 34}" fill="none" stroke-linecap="round" stroke-linejoin="round"/>` + road(d, i === 0 ? 38 : 26)).join('');
+    s += `<circle cx="560" cy="540" r="52" fill="#bfe3a5" stroke="#fffaf0" stroke-width="22"/>`;
+    // railway
+    s += `<path d="M0 930 L1000 820" stroke="#8a8798" stroke-width="12"/><path d="M0 930 L1000 820" stroke="#f3ecd9" stroke-width="4" stroke-dasharray="10 14"/>`;
+    // trees
+    [[120, 820], [170, 790], [660, 500], [720, 540], [600, 470], [520, 760], [90, 470], [880, 620], [400, 300], [700, 180]].forEach(([x, y]) => {
+      s += `<circle cx="${x}" cy="${y}" r="14" fill="#7cc46a"/><circle cx="${x - 9}" cy="${y + 6}" r="9" fill="#6ab65a"/>`;
+    });
+    // labels
+    s += `<text x="610" y="690" font-size="20" fill="#3f86b4" transform="rotate(-38 610 690)">護城河</text>`;
+    s += `<text x="650" y="742" font-size="20" fill="#9a8a68" transform="rotate(56 650 742)">中正路</text>`;
+    DECO.forEach((d) => { s += `<g class="mk" data-deco="${d.name}"><circle cx="${d.x}" cy="${d.y}" r="20" fill="#fff" stroke="#c8c2d8" stroke-width="3"/><circle cx="${d.x}" cy="${d.y}" r="7" fill="#c8c2d8"/><text x="${d.x}" y="${d.y + 44}" text-anchor="middle" font-size="19" fill="#8a87a0" stroke="#f3ecd9" stroke-width="5" paint-order="stroke">${d.name}</text></g>`; });
+    // station
+    const st = PLACES.station;
+    s += `<g class="mk" data-mk="station"><rect x="${st.x - 46}" y="${st.y - 30}" width="92" height="56" rx="12" fill="#22213a"/><path d="M${st.x - 30} ${st.y - 30} L${st.x} ${st.y - 52} L${st.x + 30} ${st.y - 30}Z" fill="#22213a"/>
+      <text x="${st.x}" y="${st.y + 7}" text-anchor="middle" font-size="20" fill="#fff">新竹車站</text></g>`;
+    MAPBASE = s; return s;
+  }
+  function mapSVG() {
+    let s = `<svg class="map" id="mapsvg" viewBox="0 0 1000 1000" aria-label="新竹舊城示意地圖">` + mapBase();
+    const t = T();
+    if (t) {
+      const pts = ['station'].concat(t.route, ['station']);
+      for (let i = 0; i < pts.length - 1; i++) {
+        const done = i < t.idx || (i === t.idx && t.stage === 'arrived');
+        s += `<path d="${legPath(pts[i], pts[i + 1])}" stroke="${done ? '#2f9a44' : '#6a5cf0'}" stroke-width="10" fill="none" stroke-linecap="round" ${done ? '' : 'stroke-dasharray="2 18"'} opacity="${done ? .85 : 1}"/>`;
+      }
+    }
+    const ids = t ? t.route : ['dongmen', 'film', 'temple', 'moat'];
+    Object.keys(PLACES).filter((k) => k !== 'station').forEach((id) => {
+      const p = PLACES[id], inRoute = ids.includes(id), n = t ? t.route.indexOf(id) : -1;
+      const done = t && n > -1 && n < t.idx;
+      const next = t && n === t.idx && t.stage !== 'finished';
+      const col = done ? '#2f9a44' : inRoute ? '#6a5cf0' : '#b5b0cc';
+      s += `<g class="mk" data-mk="${id}">${next ? `<circle class="pulse" cx="${p.x}" cy="${p.y}" r="30" fill="#6a5cf0"/>` : ''}
+        <path d="M${p.x} ${p.y + 6} l-14 -22 a22 22 0 1 1 28 0z" fill="${col}"/>
+        <circle cx="${p.x}" cy="${p.y - 30}" r="30" fill="${col}" stroke="#fff" stroke-width="5"/>
+        <text x="${p.x}" y="${p.y - 19}" text-anchor="middle" font-size="30" fill="#fff">${done ? '✓' : p.glyph}</text>
+        ${t && n > -1 ? `<circle cx="${p.x + 24}" cy="${p.y - 54}" r="13" fill="#fcbc10" stroke="#fff" stroke-width="3"/><text x="${p.x + 24}" y="${p.y - 48.5}" text-anchor="middle" font-size="15" fill="#22213a" style="font-family:var(--font-num);font-weight:700">${n + 1}</text>` : ''}
+        <text x="${p.x}" y="${p.y + 34}" text-anchor="middle" font-size="22" fill="#22213a" stroke="#f3ecd9" stroke-width="6" paint-order="stroke">${p.short}</text></g>`;
+    });
+    s += `<g class="me" id="me" transform="translate(${S.me.x} ${S.me.y})"><circle class="ring" r="26" fill="#3a8fd0" opacity=".35"/><circle r="15" fill="#3a8fd0" stroke="#fff" stroke-width="5"/></g>`;
+    s += `<path id="legpath" d="" fill="none" stroke="none"/>`;
+    return s + '</svg>';
+  }
+  // pan & zoom
+  const MV = { x: 0, y: 0, k: .6 };
+  function applyMV() { const m = $('mapsvg'); if (m) m.style.transform = `translate(${MV.x}px, ${MV.y}px) scale(${MV.k})`; }
+  function centerOn(x, y, k, smooth) {
+    const w = $('mapwrap'); if (!w) return;
+    if (k) MV.k = k;
+    const r = w.getBoundingClientRect();
+    const yOff = r.height * .36;
+    MV.x = r.width / 2 - x * MV.k; MV.y = yOff - y * MV.k;
+    const m = $('mapsvg');
+    if (m && smooth && !RM) { m.style.transition = 'transform .6s cubic-bezier(.3,1,.4,1)'; setTimeout(() => { if (m) m.style.transition = ''; }, 650); }
+    applyMV();
+  }
+  function mountMap() {
+    const w = $('mapwrap'); if (!w) return;
+    const pts = new Map(); let last = null, pinch = null, moved = 0;
+    w.addEventListener('pointerdown', (e) => { w.setPointerCapture(e.pointerId); pts.set(e.pointerId, { x: e.clientX, y: e.clientY }); last = { x: e.clientX, y: e.clientY }; moved = 0; w.classList.add('drag');
+      if (pts.size === 2) { const [a, b] = [...pts.values()]; pinch = { d: Math.hypot(a.x - b.x, a.y - b.y), k: MV.k }; } });
+    w.addEventListener('pointermove', (e) => {
+      if (!pts.has(e.pointerId)) return; pts.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (pts.size === 2 && pinch) { const [a, b] = [...pts.values()]; const d = Math.hypot(a.x - b.x, a.y - b.y); zoomAt((a.x + b.x) / 2, (a.y + b.y) / 2, pinch.k * d / pinch.d / MV.k); return; }
+      const dx = e.clientX - last.x, dy = e.clientY - last.y; moved += Math.abs(dx) + Math.abs(dy);
+      MV.x += dx; MV.y += dy; last = { x: e.clientX, y: e.clientY }; applyMV();
+    });
+    const up = (e) => { pts.delete(e.pointerId); if (pts.size < 2) pinch = null; if (!pts.size) w.classList.remove('drag');
+      if (moved < 6 && e.type === 'pointerup') { const el = document.elementFromPoint(e.clientX, e.clientY); const mk = el && el.closest('[data-mk],[data-deco]'); if (mk) tapMarker(mk); }
+      if (pts.size === 1) { last = [...pts.values()][0]; } };
+    w.addEventListener('pointerup', up); w.addEventListener('pointercancel', up);
+    w.addEventListener('wheel', (e) => { e.preventDefault(); zoomAt(e.clientX, e.clientY, e.deltaY < 0 ? 1.12 : 1 / 1.12); }, { passive: false });
+    applyMV();
+  }
+  function zoomAt(cx, cy, f) {
+    const w = $('mapwrap'); if (!w) return; const r = w.getBoundingClientRect();
+    const nk = Math.min(1.6, Math.max(.35, MV.k * f)); f = nk / MV.k;
+    const px = cx - r.left, py = cy - r.top;
+    MV.x = px - (px - MV.x) * f; MV.y = py - (py - MV.y) * f; MV.k = nk; applyMV();
+  }
+  function tapMarker(mk) {
+    if (mk.dataset.deco) return toast(mk.dataset.deco + '：內容建置中（Demo 未開放）');
+    const id = mk.dataset.mk;
+    if (id === 'station') return toast('新竹火車站：起點與終點');
+    if (T() && T().stage === 'walking') return;
+    S.focus = id; S.sheetOpen = true; renderSheet(); centerOn(PLACES[id].x, PLACES[id].y, null, true);
+  }
+
+  // walking animation
+  let walkRAF = 0;
+  function startWalk() {
+    const t = T(); const target = t.idx < t.route.length ? t.route[t.idx] : 'station'; const from = here();
+    const w = walk(from, target); const lp = $('legpath'); if (!lp) return; lp.setAttribute('d', legPath(from, target));
+    const len = lp.getTotalLength(); const c0 = t.clock;
+    t.stage = 'walking'; t.walkP = 0; S.focus = null; S.sheetOpen = false; renderSheet(); renderTabbar();
+    let last = performance.now(), p = 0;
+    const base = Math.max(1800, Math.min(3600, w * 420));
+    const step = (now) => {
+      const dt = now - last; last = now; p = Math.min(1, p + dt / (base / S.speed));
+      const pt = lp.getPointAtLength(len * easeIO(p)); S.me = { x: pt.x, y: pt.y };
+      const me = $('me'); if (me) me.setAttribute('transform', `translate(${pt.x} ${pt.y})`);
+      t.clock = c0 + Math.round(w * p); t.walkP = p;
+      $('clock').textContent = fmt(t.clock);
+      const bar = $('walkfill'); if (bar) bar.style.width = (p * 100) + '%';
+      const eta = $('walkleft'); if (eta) eta.textContent = `還有 ${Math.max(0, Math.ceil(w * (1 - p)))} 分`;
+      const mw = $('mapwrap'); if (mw) { MV.x += ((mw.clientWidth / 2 - pt.x * MV.k) - MV.x) * .08; MV.y += ((mw.clientHeight * .36 - pt.y * MV.k) - MV.y) * .08; applyMV(); }
+      if (p < 1) walkRAF = requestAnimationFrame(step); else arriveAt(target);
+    };
+    cancelAnimationFrame(walkRAF);
+    if (RM) { p = .999; }
+    walkRAF = requestAnimationFrame(step);
+  }
+  const easeIO = (x) => (x < .5 ? 2 * x * x : 1 - Math.pow(-2 * x + 2, 2) / 2);
+  function arriveAt(target) {
+    const t = T(); const pl = PLACES[target];
+    S.me = { x: pl.x, y: pl.y };
+    if (target === 'station') { t.backWalk = walk(t.route[t.route.length - 1], 'station'); finishTrip(); return; }
+    t.stage = 'arrived';
+    S.modal = { type: 'arrive', id: target };
+    render();
+    setTimeout(() => { const b = document.querySelector('.mbox .burst'); if (b) addCoins(5, '抵達 ' + pl.short, b); }, 350);
+  }
+  function ffWalk() { // presenter fast-forward
+    const t = T(); const target = t.idx < t.route.length ? t.route[t.idx] : 'station';
+    t.clock += walk(here(), target); S.me = { x: PLACES[target].x, y: PLACES[target].y };
+    if (target === 'station') { t.backWalk = walk(t.route[t.route.length - 1], 'station'); finishTrip(true); return; }
+    t.stage = 'arrived'; addCoins(5, '抵達 ' + PLACES[target].short);
+  }
+  function ffQuiz() { S.quiz = { sel: PLACES[T().route[T().idx]].quiz.a, wrong: [], hint: false }; completeTask(true); }
+
+  function completeTask(silent) {
+    const t = T(), id = t.route[t.idx], pl = PLACES[id];
+    const gain = S.quiz.wrong.length ? 5 : 10;
+    const plan = taskOf(id); let actual = plan;
+    if (t.idx === delayIdx() && !t.delayed) actual += DELAY;
+    t.clock += actual; t.log.push({ id, w: walk(here(), id), plan, actual });
+    giveBadge(id);
+    if (silent) { addCoins(gain, pl.short + ' 任務'); return afterTask(true); }
+    S.modal = { type: 'result', id, gain, actual, plan };
+    render(); confetti();
+    setTimeout(() => { const b = document.querySelector('.mbox .burst'); if (b) addCoins(gain, pl.short + ' 任務', b); }, 400);
+  }
+  function afterTask(silent) {
+    const t = T(); const last = t.log[t.log.length - 1];
+    S.view = 'map'; S.tab = 'map'; S.quiz = null;
+    if (t.idx === delayIdx() && !t.delayed && last.actual > last.plan) { t.delayed = true; S.modal = { type: 'replan' }; if (!silent) render(); return; }
+    t.idx += 1; t.stage = 'ready'; S.modal = null; S.sheetOpen = true;
+    if (!silent) { render(); focusNext(); }
+  }
+  function replanOptions() {
+    const t = T(), cur = t.route[t.idx], rest = t.route.slice(t.idx + 1), opts = [];
+    if (rest.length) { const n = rest[0]; const o = Object.assign({}, t.override, { [n]: PLACES[n].quick });
+      opts.push({ key: 'A', title: '縮短' + PLACES[n].short, desc: n === 'temple' ? '只找匾額完成任務，小吃改外帶邊走邊吃。' : '只做外觀觀察題，不進館。', route: rest, override: o, plan: schedule(cur, rest, t.clock, o) }); }
+    if (cur !== 'moat') opts.push({ key: 'B', title: (rest.length ? '跳過' + PLACES[rest[0]].short + '，' : '') + '改走護城河', desc: '護城河就在回車站的路上，還能完成一題觀察任務。', route: ['moat'], override: t.override, plan: schedule(cur, ['moat'], t.clock, t.override) });
+    opts.push({ key: 'C', title: '照原計畫', desc: '不調整，繼續走完原本的路線。', route: rest, override: t.override, plan: schedule(cur, rest, t.clock, t.override) });
+    const c = opts.find((o) => o.key === 'C');
+    const rec = c.plan.buffer >= 10 ? c : opts.find((o) => o.key !== 'C' && status(o.plan.buffer) === 'ok') || opts[0];
+    rec.rec = true; return opts;
+  }
+  function choose(key, silent) {
+    const t = T(), o = replanOptions().find((x) => x.key === key);
+    t.route = t.route.slice(0, t.idx + 1).concat(o.route); t.override = o.override; t.choice = o.title;
+    t.idx += 1; t.stage = 'ready'; S.modal = null; S.sheetOpen = true;
+    if (!silent) { toast('路線已更新：' + o.title); render(); focusNext(); }
+  }
+  function focusNext() {
+    const t = T(); if (!t) return;
+    const id = t.idx < t.route.length ? t.route[t.idx] : 'station'; const p = PLACES[id];
+    setTimeout(() => centerOn((p.x + S.me.x) / 2, (p.y + S.me.y) / 2, .62, true), 60);
+  }
+  function finishTrip(silent) {
+    const t = T(); t.stage = 'finished';
+    const buf = deadline() - t.clock;
+    giveBadge('all'); if (buf >= 0) giveBadge('ontime');
+    addCoins(10, '完成路線獎勵');
+    S.view = 'finish'; S.modal = null;
+    if (!silent) { render(); setTimeout(confetti, 500); }
+  }
+
+  // ---------- views ----------
+  function coinsBox() { return `<span class="coinpill"><i class="coin"></i><b data-coins>${S.coins}</b></span>`; }
+  function viewHome() {
+    const t = T();
+    const banners = [
+      { big: '90 MIN', zh: '竹塹舊城短程探索', bg: ['#6a5cf0', '#9b7cf6'], act: 'chat' },
+      { big: 'FOOD', zh: '城隍廟小吃線', bg: ['#e0483b', '#ff8a5c'], soon: true },
+      { big: 'GLASS', zh: '玻璃工藝線', bg: ['#22a3b8', '#5fd0c9'], soon: true }
+    ];
+    const near = ['dongmen', 'film', 'temple', 'moat'];
+    return `<div class="hello"><h2>哈囉，旅人</h2><div class="avatar">${guideSVG(30)}</div></div>
+      <div class="loc">${ic('pin')}新竹火車站 · 回程 ${fmt(deadline())}</div>
+      <div class="askbar"><button class="field" data-act="chat">${ic('chat')}跟小竹說你想怎麼逛…</button><button class="sqbtn" data-act="chat" aria-label="開始對話">${ic('sparkle')}</button></div>
+      ${t && t.stage !== 'finished' ? `<button class="livecard" data-act="tomap"><span style="display:flex;justify-content:space-between;font-weight:900">進行中的路線<span style="font-family:var(--font-num)">${Math.min(t.idx, t.route.length)}/${t.route.length}</span></span>
+        <span style="font:400 18px var(--font-round)">下一站：${t.idx < t.route.length ? PLACES[t.route[t.idx]].short : '回新竹車站'}</span>
+        <span class="bar"><i style="width:${Math.round(Math.min(t.idx, t.route.length) / t.route.length * 100)}%"></i></span></button>` : ''}
+      <div class="hscroll" id="banners" style="margin-top:14px">${banners.map((b, i) => `<button class="banner" ${b.act ? `data-act="${b.act}"` : 'data-act="soon"'} style="background:linear-gradient(120deg,${b.bg[0]},${b.bg[1]})">
+        <svg class="bg" viewBox="0 0 300 150" preserveAspectRatio="none" aria-hidden="true"><circle cx="250" cy="20" r="70" fill="rgba(255,255,255,.12)"/><circle cx="40" cy="160" r="60" fill="rgba(255,255,255,.1)"/><path d="M0 120 Q80 90 160 118 T300 104 V150 H0Z" fill="rgba(0,0,0,.08)"/></svg>
+        ${b.soon ? '<span class="soon">即將推出</span>' : ''}<span class="big">${b.big}</span><span class="zh">${b.zh}</span><span class="go">${ic('chev')}</span></button>`).join('')}</div>
+      <div class="dots" id="bdots">${banners.map((_, i) => `<i class="${i === 0 ? 'on' : ''}"></i>`).join('')}</div>
+      <div class="sec"><h3>你附近的探索點</h3><small>從車站步行</small></div>
+      <div class="hscroll">${near.map((id) => { const p = PLACES[id]; return `<button class="pcard" data-near="${id}"><div class="img">${scene(id, 'n' + id)}</div><div class="b">
+        <span class="nm">${p.short}</span><span class="meta">${ic('walk')}${walk('station', id)} 分鐘 · ${ic('clock')}任務 ${p.task} 分</span>
+        <span style="display:flex;justify-content:space-between;align-items:center"><span class="meta">${ic('star', 'y')}${p.tags.join('、')}</span><span class="free">FREE</span></span></div></button>`; }).join('')}</div>
+      <div class="sec"><h3>新竹舊城</h3><small>示意地圖</small></div>
+      <button class="helpcard" data-act="tomap"><span><b>打開探索地圖</b><small>自由探索模式：自己挑想去的點</small></span><span class="go">${ic('chev')}</span></button>`;
+  }
+  function viewChat() {
+    const c = S.chat;
+    const quick = chatQuick();
+    return `<div class="chat"><header><button class="scorebox" style="padding:0;box-shadow:none" data-act="home"><span class="back">${ic('back')}</span></button>
+        <div class="avatar" style="width:44px;height:44px;background:#e5f6df;border:0">${guideSVG(28)}</div>
+        <div class="t"><b>小竹</b><small>● 竹跡 AI 導覽</small></div></header>
+      <div class="msgs" id="msgs">${c.msgs.map(msgHTML).join('')}${c.typing ? `<div class="botrow"><div class="mini">${guideSVG(30)}</div><div class="msg bot typing"><i></i><i></i><i></i></div></div>` : ''}</div>
+      ${quick ? `<div class="quick">${quick}</div>` : ''}
+      <form class="composer" id="composer"><input id="chatin" autocomplete="off" placeholder="${c.step >= CHATQ.length ? '輸入「出發」開始行程' : '直接打字也可以，例如：想吃米粉'}"><button class="sqbtn" style="width:44px;height:44px" aria-label="送出">${ic('send')}</button></form></div>`;
+  }
+  function msgHTML(m) {
+    if (m.who === 'me') return `<div class="msg me">${esc(m.text)}</div>`;
+    if (m.who === 'route') {
+      const p = schedule('station', ROUTES[S.prefs.time], START);
+      return `<div class="routepeek"><div class="top"><b>竹塹舊城 ${S.prefs.time} 分鐘</b><small>${p.items.length} 站 · ${fmt(p.end)} 回到車站 · 緩衝 ${p.buffer} 分</small></div>
+        <ol>${p.items.map((it) => `<li>${PLACES[it.id].short}<span style="color:var(--gray);font-size:12px"> · ${it.task} 分</span></li>`).join('')}</ol>
+        <button class="btn green" data-act="begin">${ic('walk')}開始行程</button><button class="btn line" style="margin-top:0" data-act="toroute">先看完整路線</button></div><span class="ailabel">AI 解析在 Demo 中以關鍵字模擬</span>`;
+    }
+    return `<div class="botrow"><div class="mini">${guideSVG(30)}</div><div class="msg bot">${m.text}</div></div>`;
+  }
+  const CHATQ = [
+    { q: '嗨！我是小竹，陪你在新竹逛一段。你現在在新竹車站，還有多少時間呢？', opts: ['60 分鐘', '90 分鐘', '120 分鐘'], key: 'time' },
+    { q: '收到！這次跟誰一起來？', opts: ['自己', '朋友', '家庭', '外國旅客'], key: 'who' },
+    { q: '想看什麼？可以多選，或直接打字告訴我。', opts: ['老建築', '在地小吃', '文化館', '拍照'], key: 'interests', multi: true },
+    { q: '最後一題：你想怎麼移動？', opts: ['步行', '公車', 'YouBike'], key: 'mode' }
+  ];
+  function chatQuick() {
+    const c = S.chat; if (c.typing) return '';
+    if (c.step >= CHATQ.length) return c.msgs.some((m) => m.who === 'route') ? `<button class="btn line" data-act="toroute">先看完整路線</button><button class="btn green" data-act="begin">${ic('walk')}開始行程</button>` : '';
+    const q = CHATQ[c.step];
+    if (q.multi) return q.opts.map((o) => `<button class="qchip ${c.picks.includes(o) ? 'on' : ''}" data-pick="${o}">${o}</button>`).join('') + `<button class="qchip send" data-act="pickdone">好了 ${ic('send')}</button>`;
+    return q.opts.map((o) => `<button class="qchip" data-ans="${o}">${o}</button>`).join('');
+  }
+  function botSay(text, after) {
+    S.chat.typing = true; renderChatOnly();
+    setTimeout(() => { S.chat.typing = false; S.chat.msgs.push({ who: 'bot', text }); renderChatOnly(); after && after(); }, RM ? 50 : 750);
+  }
+  function startChat() {
+    S.chat = { step: 0, msgs: [], typing: false, picks: [] }; S.view = 'chat'; render();
+    botSay(CHATQ[0].q);
+  }
+  function answerChat(text, parsed) {
+    const c = S.chat, q = CHATQ[c.step];
+    c.msgs.push({ who: 'me', text });
+    if (q.key === 'time') S.prefs.time = parsed?.time || parseInt(text, 10) || 90;
+    if (q.key === 'who') S.prefs.who = parsed?.who || text;
+    if (q.key === 'interests') { const p = parsed || parse(text); S.prefs.interests = p.interests.length ? p.interests : ['老建築']; S.prefs.limits = p.limits || []; }
+    if (q.key === 'mode') S.prefs.mode = parsed?.mode || text;
+    c.step += 1; renderChatOnly();
+    const replies = {
+      time: `${S.prefs.time} 分鐘，回程是 ${fmt(deadline())}。我會幫你留回程緩衝。`,
+      who: S.prefs.who === '家庭' ? '家庭出遊的話，我會挑好走、可以休息的點。' : S.prefs.who === '外國旅客' ? 'Got it! 正式版會提供英文導覽。' : '好，那節奏可以輕快一點。',
+      interests: `了解，你想看「${S.prefs.interests.join('、')}」${S.prefs.limits.length ? '，而且不想走太遠' : ''}。`,
+      mode: S.prefs.mode === '步行' ? '舊城很適合用走的。' : `你選了${S.prefs.mode}，我會算算看搭車有沒有比較快。`
+    };
+    botSay(replies[q.key], () => {
+      if (c.step < CHATQ.length) botSay(CHATQ[c.step].q);
+      else { botSay('幫你排好了！每一段的時間我都算過，最後還有回程緩衝：', () => { c.msgs.push({ who: 'route' }); renderChatOnly(); botSay('準備好就按「開始行程」，或跟我說「出發」！'); }); }
+    });
+  }
+  function renderChatOnly() {
+    if (S.view !== 'chat') return;
+    const v = $('view'); const keep = $('chatin') ? $('chatin').value : '';
+    v.innerHTML = viewChat(); if ($('chatin')) $('chatin').value = keep;
+    const m = $('msgs'); if (m) m.scrollTop = m.scrollHeight;
+  }
+
+  function viewRoute() {
+    const t = T(); const live = t && t.stage !== 'finished';
+    const route = live ? t.route : ROUTES[S.prefs.time];
+    const p = schedule('station', route, START, live ? t.override : null);
+    const walkSum = p.items.reduce((a, b) => a + b.w, 0) + p.back;
+    const maxLeg = Math.max(...p.items.map((x) => x.w), p.back);
+    const modeNote = S.prefs.mode !== '步行' ? `<div class="about" style="margin-top:10px"><b style="display:flex;gap:6px;align-items:center">${ic('bus')}為什麼沒有排${S.prefs.mode}？</b><span style="color:var(--gray)">每段步行都在 ${maxLeg} 分鐘內，${S.prefs.mode === '公車' ? '等車加搭車不會比較快。公車段要等 TDX 到站資料實測過才納入。' : '借還車的時間比走路還久。'}</span></div>` : '';
+    return `<div class="hero">${scene('dongmen', 'rh')}
+        <button class="glass" style="left:14px" data-act="${live ? 'tomap' : 'chat'}" aria-label="返回">${ic('back')}</button>
+        <button class="glass" style="right:14px" data-act="share" aria-label="分享">${ic('share')}</button>
+        <div class="tabs"><span class="a">${ic('sparkle')}AI 推薦路線</span><span class="b">${ic('flag')}</span></div></div>
+      <div class="titlerow"><h2>竹塹舊城 ${S.prefs.time} 分鐘</h2>
+        <div class="stars">${ic('star')}${ic('star')}${ic('star')}${ic('star')}${ic('star')}<span>為你客製 · ${S.prefs.who}</span></div></div>
+      ${live ? '' : `<div class="label">可用時間（點選即時重排）</div><div class="seg">${[60, 90, 120].map((m) => `<button data-time="${m}" class="${S.prefs.time === m ? 'on' : ''}">${m} 分</button>`).join('')}</div>`}
+      <div class="tiles3">
+        <div class="ftile"><span class="fi" style="background:var(--yellow)">${ic('flag')}</span><small>起點</small><b>新竹車站</b></div>
+        <div class="ftile"><span class="fi" style="background:var(--main)">${ic('pin')}</span><small>探索點</small><b style="font-family:var(--font-num)">${p.items.length}</b></div>
+        <div class="ftile"><span class="fi" style="background:var(--green)">${ic('star')}</span><small>終點</small><b>新竹車站</b></div></div>
+      <div class="tiles2"><div class="col">
+          <div class="htile"><span class="ci" style="background:var(--green)">${ic('clock')}</span><span>預估總時間<b>${p.end - START} 分</b></span></div>
+          <div class="htile"><span class="ci" style="background:var(--main)">${ic('walk')}</span><span>步行合計<b>${walkSum} 分</b></span></div></div>
+        <div class="bigtile"><small>回程緩衝</small><b>${p.buffer}</b><span>分鐘 · ${fmt(p.end)} 回到車站</span></div></div>
+      <div class="label">小竹理解到的需求 <span class="simtag">DEMO 模擬</span></div>
+      <div class="chips">${S.prefs.interests.map((x) => `<span class="chip">${x}</span>`).join('')}${S.prefs.limits.map((x) => `<span class="chip y">${x}</span>`).join('')}<span class="chip y">${S.prefs.mode}</span></div>
+      <div class="label">路線</div>
+      <div class="stoplist">${p.items.map((it, i) => { const pl = PLACES[it.id]; const done = live && i < t.idx; return `
+        <div class="leg">${ic('walk')}步行 ${it.w} 分</div>
+        <button class="stop ${done ? 'done' : ''}" data-near="${it.id}"><span class="th">${scene(it.id, 'st' + it.id + i)}<em>${done ? '✓' : i + 1}</em></span>
+          <span><span class="nm">${pl.name}</span><br><span class="why">${pl.why}</span></span><span class="tm">${fmt(it.arrive)}<br><span style="color:var(--gray);font-weight:500">${it.task} 分</span></span></button>`; }).join('')}
+        <div class="leg">${ic('walk')}步行 ${p.back} 分 · ${fmt(p.end)} 回到新竹車站</div></div>
+      ${modeNote}
+      <div class="label">排程規則檢查（由程式計算）</div>
+      <div class="about"><ul class="checks"><li>${ic('check')}回程緩衝 ≥ 10 分（目前 ${p.buffer} 分）</li><li>${ic('check')}每段步行 ≤ ${maxLeg} 分</li><li>${ic('check')}任務時間依實測停留估算（示意資料）</li></ul></div>
+      <div class="sticky"><button class="btn" data-act="${live ? 'tomap' : 'begin'}">${ic('walk')}${live ? '回到地圖' : '開始探索'}</button></div>`;
+  }
+
+  function viewMap() {
+    const t = T();
+    return `<div class="mapwrap" id="mapwrap">${mapSVG()}</div>
+      <div class="topbar"><div class="scorebox"><button class="back" data-act="home" aria-label="回主頁">${ic('back')}</button>${coinsBox()}
+        ${t ? `<span class="prog">${ic('route')}${Math.min(t.idx, t.route.length)}/${t.route.length}</span>` : ''}</div>
+        <div class="rgroup"><button class="rbtn" data-act="${t ? 'toroute' : 'chat'}" aria-label="路線"><i style="background:var(--pink)">${ic(t ? 'route' : 'chat')}</i></button>
+        <button class="rbtn" data-act="shop" aria-label="附近店家"><i style="background:var(--main)">${ic('bag')}</i></button></div></div>
+      ${t ? '' : `<div class="modechip"><i></i>自由探索模式</div>`}
+      <div class="mapctl" id="mapctl"><button data-act="zin" aria-label="放大">${ic('plus')}</button><button data-act="zout" aria-label="縮小">${ic('minus')}</button><button data-act="locate" aria-label="回到我的位置">${ic('locate')}</button></div>
+      <div class="sheet" id="sheet"></div>`;
+  }
+  function sheetHTML() {
+    const t = T();
+    if (t && t.stage === 'walking') {
+      const target = t.idx < t.route.length ? t.route[t.idx] : 'station'; const w = walk(here(), target);
+      return `<span class="handle"><i></i></span><div class="row"><div class="info"><span class="k">步行中 · 往第 ${t.idx < t.route.length ? t.idx + 1 : '終'} 站</span><span class="nm">${PLACES[target].short}</span></div>
+        <span class="buf ok" id="walkleft">還有 ${w} 分</span></div>
+        <div class="walkbar"><i id="walkfill"></i></div><div class="eta"><span>${PLACES[here()].short}</span><span>預計 ${fmt(t.clock + Math.round(w * (1 - t.walkP)))} 抵達</span></div>
+        <div class="speed">${[1, 2, 4].map((v) => `<button data-speed="${v}" class="${S.speed === v ? 'on' : ''}">${v}× 示範速度</button>`).join('')}</div>`;
+    }
+    if (t && t.stage === 'arrived' && !S.focus) {
+      const pl = PLACES[t.route[t.idx]];
+      return `<span class="handle"><i></i></span><div class="row"><div class="info"><span class="k">已抵達 · 第 ${t.idx + 1} 站</span><span class="nm">${pl.name}</span><span class="d">${ic('flag')} 完成現場任務才算過關</span></div><div class="pic">${scene(t.route[t.idx], 'sha')}</div></div>
+        <div class="acts"><button class="btn green" data-act="story">${ic('flag')}開始任務</button></div>`;
+    }
+    if (t && t.stage === 'finished' && !S.focus) return `<span class="handle"><i></i></span><div class="row"><div class="info"><span class="k">行程完成</span><span class="nm">已回到新竹車站</span></div></div><div class="acts"><button class="btn" data-act="tofinish">看探索成果</button></div>`;
+    const id = S.focus || (t && t.stage === 'ready' ? (t.idx < t.route.length ? t.route[t.idx] : 'station') : null);
+    if (!id) return `<span class="handle"><i></i></span><div class="row"><div class="info"><span class="k">自由探索</span><span class="nm">點地圖上的探索點看看</span><span class="d">或讓小竹幫你排一條走得完的路線</span></div></div><div class="acts"><button class="btn" data-act="chat">${ic('sparkle')}請小竹規劃</button></div>`;
+    if (id === 'station') {
+      return `<span class="handle"><i></i></span><div class="row"><div class="info"><span class="k">任務全部完成</span><span class="nm">走回新竹車站</span><span class="d">${ic('walk')} 步行 ${walk(here(), 'station')} 分 · 預計 ${fmt(t.clock + walk(here(), 'station'))} 抵達</span></div><div class="pic">${scene('station', 'shst')}</div></div>
+        <div class="acts"><button class="btn green" data-act="walk">${ic('walk')}開始步行回車站</button></div>`;
+    }
+    const pl = PLACES[id]; const inTrip = t && t.idx < t.route.length && t.route[t.idx] === id && t.stage === 'ready';
+    const n = t ? t.route.indexOf(id) : -1; const done = t && n > -1 && n < t.idx;
+    const from = t ? here() : 'station'; const w = walk(from, id);
+    return `<span class="handle" data-act="sheet"><i></i></span>
+      <div class="row"><div class="info"><span class="k">${inTrip ? `下一站 · 第 ${n + 1} 站` : done ? '已完成' : n > -1 ? `路線第 ${n + 1} 站` : '探索點'}</span><span class="nm">${pl.name}</span>
+        <span class="d">${ic('walk')} ${w} 分 · 任務 ${taskOf2(id)} 分${inTrip ? ` · 預計 ${fmt(t.clock + w)} 抵達` : ''}</span></div><div class="pic">${scene(id, 'sh' + id)}</div></div>
+      <div class="more"><div class="about" style="margin-top:12px;background:var(--bg)"><span>${pl.why}</span><div class="chips">${pl.tags.map((x) => `<span class="chip">${x}</span>`).join('')}</div></div></div>
+      <div class="acts">${inTrip ? `<button class="btn green" data-act="walk">${ic('walk')}開始步行</button>` : !t ? `<button class="btn" data-act="chat">${ic('sparkle')}把這裡排進路線</button>` : `<button class="btn line" data-act="unfocus">回到下一站</button>`}</div>`;
+  }
+  const taskOf2 = (id) => (T() ? taskOf(id) : PLACES[id].task);
+  function renderSheet() {
+    const sh = $('sheet'); if (!sh) return;
+    sh.innerHTML = sheetHTML(); sh.classList.toggle('open', S.sheetOpen);
+    const t = T(); const walking = t && t.stage === 'walking';
+    sh.classList.toggle('nobar', walking);
+    const ctl = $('mapctl'); if (ctl) requestAnimationFrame(() => { ctl.style.bottom = (sh.offsetHeight + (walking ? 14 : 92) + 12) + 'px'; });
+  }
+
+  function viewStory() {
+    const t = T(), id = t.route[t.idx], pl = PLACES[id];
+    return `<div class="storyhero">${scene(id, 'sty', { egg: id === 'dongmen' && !S.egg })}
+        <svg class="wave" viewBox="0 0 400 46" preserveAspectRatio="none" aria-hidden="true"><path d="M0 30 C90 0 160 50 250 24 S360 10 400 22 V46 H0Z" fill="var(--bg)"/></svg>
+        <div class="topbar"><div class="scorebox"><button class="back" data-act="tomap" aria-label="返回地圖">${ic('back')}</button>${coinsBox()}<span class="prog">${ic('route')}${t.idx + 1}/${t.route.length}</span></div>
+          <div class="rgroup"><button class="rbtn" data-act="speak" aria-label="朗讀"><i style="background:var(--pink)">${ic('headset')}</i></button></div></div></div>
+      <div class="story"><h2>${pl.name}</h2>
+        <div class="guide">${guideSVG(52)}<div class="bubble">${pl.story}</div></div>
+        ${id === 'dongmen' && !S.egg ? `<div class="eggtip">${ic('sparkle')}在上面的畫面裡找找看，竹筍彩蛋藏在哪？</div>` : ''}
+        <div class="facts">${pl.facts.map(([k, v]) => `<div><b>${k}｜</b>${v}</div>`).join('')}<div style="color:var(--gray);font-size:12.5px">內容待實地與文史資料核對</div></div>
+        <div class="btnrow" style="margin-top:16px"><button class="btn line" data-act="quiz">跳過故事</button><button class="btn green" data-act="quiz">開始挑戰</button></div></div>`;
+  }
+  function viewQuiz() {
+    const t = T(), id = t.route[t.idx], pl = PLACES[id], q = pl.quiz, Q = S.quiz;
+    const cols = ['#6a5cf0', '#fcbc10', '#2f9a44', '#c05757'];
+    return `<svg class="quizbg" viewBox="0 0 400 800" preserveAspectRatio="none" aria-hidden="true"><path d="M0 150 Q200 40 400 90 V300 Q200 300 0 420Z" fill="#c05757"/><path d="M0 520 Q240 540 400 680 V760 Q220 640 0 620Z" fill="#8e4e4d"/></svg>
+      <div class="topbar" style="position:absolute"><div class="scorebox"><button class="back" data-act="story" aria-label="返回">${ic('back')}</button>${coinsBox()}<span class="prog">${ic('route')}${t.idx + 1}/${t.route.length}</span></div>
+        <div class="rgroup"><button class="rbtn" data-act="speakq" aria-label="朗讀題目"><i style="background:var(--pink)">${ic('headset')}</i></button><button class="rbtn" data-act="hint" aria-label="提示"><i style="background:var(--yellow)">${ic('bulb')}</i></button></div></div>
+      <span class="chtag">CHALLENGE</span>
+      <div class="qimg">${scene(id, 'q' + id)}</div>
+      <div class="qcard"><small>現地觀察任務 · 答對 +10</small>${q.q}</div>
+      <div class="qgrid" id="qgrid">${q.opts.map((o, i) => `<button class="qopt ${Q.sel === i ? 'sel' : ''} ${Q.wrong.includes(i) ? 'bad' : ''}" data-opt="${i}" ${Q.wrong.includes(i) ? 'disabled' : ''}><span class="gl" style="background:${cols[i]}">${'甲乙丙丁'[i]}</span>${o}</button>`).join('')}</div>
+      ${Q.hint ? `<div class="hintbox">${ic('bulb')}${q.hint}</div>` : ''}
+      ${Q.wrong.length ? `<div class="hintbox" style="background:#fff;color:var(--red)">不是這個喔，再看看現場。</div>` : ''}
+      <div style="text-align:center;color:#fff;font-weight:700;font-size:13.5px;margin-top:12px">點選答案就會直接作答</div>
+      <div class="btnrow" style="margin-top:10px"><button class="btn white-line" data-act="story">返回故事</button></div>`;
+  }
+  function viewFinish() {
+    const t = T(); const buf = deadline() - t.clock;
+    const rows = t.log.map((l) => `<tr><td>${PLACES[l.id].short}</td><td>${l.w}</td><td>${l.plan}</td><td class="${l.actual > l.plan ? 'over' : ''}">${l.actual}</td></tr>`).join('');
+    return `<div class="head"><div style="font-weight:700;opacity:.85;font-size:13px">${fmt(t.clock)} 抵達新竹車站</div><h2>準時回到車站！</h2>${badgeSVG(BADGES.find((b) => b.id === 'all'), 'big').replace('<svg', '<svg class="bigbadge"')}</div>
+      <div class="statgrid"><div><b>${t.log.length}</b><span>完成任務</span></div><div><b>${S.coins}</b><span>竹跡幣</span></div><div><b>${buf}</b><span>回程緩衝（分）</span></div></div>
+      <div class="label">探索紀錄（分鐘）</div>
+      <div class="about"><table class="rec"><thead><tr><th>站點</th><th>步行</th><th>預估停留</th><th>實際停留</th></tr></thead><tbody>${rows}<tr><td>回車站</td><td>${t.backWalk}</td><td>–</td><td>–</td></tr></tbody></table>
+        <span style="color:var(--gray);font-size:12.5px">場域測試會收集這些「預估 vs 實際」紀錄，用來校正每個任務的停留時間。${t.choice ? `途中重排：${t.choice}。` : ''}</span></div>
+      <div class="btnrow" style="margin-top:16px"><button class="btn yellow" data-act="sharebadge">${ic('share')}分享徽章</button><button class="btn" data-act="tobadges">${ic('medal')}看徽章牆</button></div>
+      <button class="btn line" style="margin-top:10px" data-act="reset">再玩一次</button>`;
+  }
+  function viewBadges() {
+    const got = S.badges.length;
+    const html = `<div class="hello"><h2>徽章牆</h2><span class="coinpill" style="font-size:15px">${got}/${BADGES.length - 2}</span></div>
+      <div class="loc">${ic('medal')}完成任務就能收集，未來可分享到 Instagram</div>
+      <div class="badgegrid" style="margin-top:16px">${BADGES.map((b) => { const on = S.badges.includes(b.id); return `<div class="bcell ${on ? '' : 'lock'} ${S.newBadges.includes(b.id) ? 'new' : ''}">${badgeSVG(b, 's')}<b>${on ? b.name : b.how === '即將推出' ? b.name : '？？？'}</b><small>${b.how}</small></div>`; }).join('')}</div>`;
+    S.newBadges = [];
+    return html;
+  }
+  function viewWallet() {
+    const shops = [
+      { nm: '廟口米粉攤', d: '10 幣折抵一份小碗米粉', cost: 10, c: '#c05757', g: '粉' },
+      { nm: '東門咖啡', d: '15 幣換一杯冷泡茶', cost: 15, c: '#6a5cf0', g: '咖' },
+      { nm: '貢丸老店', d: '20 幣換一份貢丸湯', cost: 20, c: '#2f9a44', g: '丸' }
+    ];
+    return `<div class="hello"><h2>竹跡幣</h2></div>
+      <div class="wallet" style="margin-top:12px"><span class="ring"></span><small>目前餘額</small><b><i class="coin"></i><span data-coins>${S.coins}</span></b><small style="font-weight:500">抵達景點 +5 · 答對 +10 · 找到彩蛋 +8</small></div>
+      <div class="sec"><h3>附近可兌換</h3><span class="simtag">流程示意 · 尚無合作店家</span></div>
+      <div style="display:grid;gap:10px">${shops.map((s, i) => `<div class="shop"><span class="lg" style="background:${s.c}">${s.g}</span><span><span class="nm">${s.nm}</span><br><small>${s.d}</small></span><button data-redeem="${i}" ${S.coins < s.cost ? 'disabled' : ''}>${s.cost} 幣</button></div>`).join('')}</div>
+      <div class="sec"><h3>紀錄</h3></div>
+      ${S.hist.length ? `<div class="hist">${S.hist.map((h) => `<div><span>${h.label}<span style="color:var(--gray);font-size:12px"> · ${h.t}</span></span><b class="${h.n < 0 ? 'neg' : ''}">${h.n > 0 ? '+' : ''}${h.n}</b></div>`).join('')}</div>` : `<div class="empty">還沒有紀錄。出發去完成第一個任務吧！</div>`}`;
+  }
+
+  // ---------- modal ----------
+  // 抵達與答對的彈窗會自己往下走，按鈕上的進度條顯示倒數
+  const AUTO = { arrive: 2600, result: 3200 };
+  let modalTimer = 0, armed = null;
+  function armModal() {
+    const m = S.modal; if (m === armed) return; armed = m; clearTimeout(modalTimer);
+    if (!m || !AUTO[m.type]) return;
+    modalTimer = setTimeout(() => { if (S.modal !== m) return; if (m.type === 'arrive') go('story'); else afterTask(); }, AUTO[m.type]);
+  }
+  function modalHTML() {
+    const m = S.modal; if (!m) return '';
+    if (m.type === 'arrive') {
+      const pl = PLACES[m.id];
+      return `<div class="modal center"><div class="mbox"><div class="burst"><i class="coin"></i></div><span class="plus">+5</span><h3>抵達${pl.short}！</h3>
+        <p>GPS 顯示你已接近（模擬到達）。完成現場任務才算過關。</p><button class="btn green auto" data-act="story">${ic('flag')}開始任務<i class="autobar" style="animation-duration:${AUTO.arrive}ms"></i></button></div></div>`;
+    }
+    if (m.type === 'result') {
+      const pl = PLACES[m.id]; const over = m.actual > m.plan;
+      return `<div class="modal center"><div class="mbox"><div class="burst"><i class="coin"></i></div><span class="plus">+${m.gain}</span><h3>答對了！</h3>
+        <p>答案：${pl.quiz.opts[pl.quiz.a]}　·　獲得徽章「${pl.badge}」</p>
+        <div class="about" style="background:var(--bg);text-align:left">${badgeSVG(BADGES.find((b) => b.id === m.id), 'm').replace('<svg', '<svg style="width:64px;height:64px;float:right"')}
+          <span>停留時間</span><span style="font-family:var(--font-num)">預估 ${m.plan} 分 · 實際 <b style="color:${over ? 'var(--red)' : 'var(--green-deep)'}">${m.actual}</b> 分 ${over ? '<span class="simtag">模擬超時</span>' : ''}</span></div>
+        <button class="btn auto" data-act="aftertask">${over ? '繼續' : '前往下一站'}<i class="autobar" style="animation-duration:${AUTO.result}ms"></i></button></div></div>`;
+    }
+    if (m.type === 'replan') {
+      const t = T(), last = t.log[t.log.length - 1], opts = replanOptions(), c = opts.find((o) => o.key === 'C');
+      const span = S.prefs.time + 10, pct = (end) => Math.min(100, Math.max(4, (end - START) / span * 100));
+      return `<div class="modal"><div class="mbox" style="text-align:left">
+        <div class="delaybox"><span><span class="simtag">模擬情境</span></span><span>你在${PLACES[last.id].short}多停了 <b>${DELAY} 分鐘</b>（預估 ${last.plan}，實際 ${last.actual}）。</span>
+          <span>照原計畫 ${fmt(c.plan.end)} 才回到車站，${c.plan.buffer < 0 ? `<b>比火車晚 ${-c.plan.buffer} 分</b>。` : `還有 ${c.plan.buffer} 分緩衝。`}</span></div>
+        <div class="guide" style="grid-template-columns:40px 1fr">${guideSVG(40)}<div class="bubble" style="font-size:15px;padding:9px 13px">${c.plan.buffer < 0 ? '別擔心，我重新算過了，這兩個方案都能準時回到車站：' : '時間還夠，可以照原計畫，也可以放慢一點：'}</div></div>
+        ${opts.map((o) => { const st = status(o.plan.buffer); return `<div class="ropt ${o.rec ? 'rec' : ''} ${st === 'fail' ? 'fail' : ''}">
+          <div class="r1"><b>${o.title}</b>${o.rec ? '<span class="rtag">推薦</span>' : ''}</div><span class="d">${o.desc}</span>
+          <div class="timebar"><i style="width:${pct(o.plan.end)}%;background:${st === 'fail' ? '#f4a49b' : st === 'tight' ? '#ffe08a' : '#bfe8b3'}"></i><span class="dl" style="left:${(S.prefs.time) / span * 100}%"></span><span>${fmt(o.plan.end)} 回站</span></div>
+          <div class="r1"><span class="buf ${st}">${st === 'fail' ? `超過回程 ${-o.plan.buffer} 分` : `緩衝 ${o.plan.buffer} 分`}</span>
+          ${st === 'fail' ? '<span class="d">規則檢查：會趕不上火車</span>' : `<button class="btn ${o.rec ? '' : 'line'}" style="width:auto;padding:8px 16px;font-size:14px" data-choose="${o.key}">選這個</button>`}</div></div>`; }).join('')}
+        <span style="font-size:12px;color:var(--gray)">紅線是回程火車 ${fmt(deadline())}</span></div></div>`;
+    }
+    if (m.type === 'hint') {
+      return `<div class="modal center"><div class="mbox"><div class="burst" style="background:var(--yellow-soft)"><span style="font-size:44px;color:#e0a000">${ic('bulb')}</span></div><h3>要使用提示嗎？</h3>
+        <p>使用提示會扣 3 竹跡幣，答對時獎勵不變。</p><div class="btnrow"><button class="btn line" data-act="closemodal">我再想想</button><button class="btn yellow" data-act="usehint">使用提示</button></div></div></div>`;
+    }
+    if (m.type === 'redeem') {
+      let cells = ''; for (let i = 0; i < 121; i++) { const x = i % 11, y = Math.floor(i / 11); const corner = (x < 3 && y < 3) || (x > 7 && y < 3) || (x < 3 && y > 7); const on = corner ? !(x === 1 && (y === 1 || y === 9)) && !((x === 9) && y === 1) : ((i * 7 + 3) % 5 < 2); if (on) cells += `<rect x="${x * 10}" y="${y * 10}" width="10" height="10"/>`; }
+      return `<div class="modal center"><div class="mbox"><h3>${m.nm}</h3><p>出示給店家掃描（示意）</p>
+        <svg viewBox="-6 -6 122 122" style="width:170px;height:170px;margin:4px auto;background:#fff;border-radius:12px" fill="#22213a" aria-label="示意兌換碼">${cells}</svg>
+        <span class="simtag" style="justify-self:center">示意 · 目前沒有合作店家，不會真的扣款</span><button class="btn" data-act="closemodal">完成</button></div></div>`;
+    }
+    if (m.type === 'share') {
+      const b = BADGES.find((x) => x.id === 'all');
+      return `<div class="modal center"><div class="mbox"><div style="background:linear-gradient(135deg,#6a5cf0,#e09a99);border-radius:22px;padding:18px;color:#fff;display:grid;gap:6px;justify-items:center">
+        <span style="font:400 18px var(--font-round)">我在新竹走完了竹塹舊城！</span>${badgeSVG(b, 'sh').replace('<svg', '<svg style="width:130px;height:130px"')}
+        <span style="font:600 13px var(--font-num)">${T() ? T().log.length : 0} 個任務 · ${S.coins} 竹跡幣 · #竹跡ChuTrace</span></div>
+        <p>正式版會產生分享圖卡到 Instagram 限動（示意）</p><button class="btn" data-act="closemodal">關閉</button></div></div>`;
+    }
+    return '';
+  }
+
+  // ---------- render ----------
+  const TABS = [['home', 'home', '主頁'], ['map', 'map', '地圖'], ['badges', 'medal', '徽章'], ['wallet', 'coin', '竹跡幣']];
+  function renderTabbar() {
+    const hide = ['chat', 'story', 'quiz', 'finish'].includes(S.view) || (T() && T().stage === 'walking' && S.view === 'map');
+    const tb = $('tabbar');
+    const idx = Math.max(0, TABS.findIndex((x) => x[0] === S.tab));
+    tb.className = 'tabbar' + (hide ? ' hide' : '');
+    tb.innerHTML = TABS.map(([k, i, l]) => `<button class="tab ${S.tab === k ? 'on' : ''}" data-tab="${k}">${ic(i)}<span>${l}</span></button>`).join('') + `<span class="indicator" id="ind"></span>`;
+    requestAnimationFrame(() => { const on = tb.querySelector('.tab.on'); const ind = $('ind'); if (on && ind) ind.style.left = (on.offsetLeft + on.offsetWidth / 2 - 32) + 'px'; });
+  }
+  let prevView = '';
+  function render() {
+    const v = $('view');
+    const map = { home: viewHome, chat: viewChat, route: viewRoute, map: viewMap, story: viewStory, quiz: viewQuiz, finish: viewFinish, badges: viewBadges, wallet: viewWallet };
+    const changed = prevView !== S.view;
+    v.className = 'view' + (['chat', 'map'].includes(S.view) ? ' full' : '') + (['story', 'quiz', 'finish'].includes(S.view) ? ' nobar' : '') + (S.view === 'quiz' ? ' quizview' : '') + (S.view === 'finish' ? ' finish' : '') + (changed && !RM ? ' enter' : '');
+    const keepScroll = !changed ? v.scrollTop : 0;
+    v.innerHTML = map[S.view]();
+    v.scrollTop = keepScroll;
+    prevView = S.view;
+    $('modal').innerHTML = modalHTML(); armModal();
+    $('status').className = 'status' + (S.view === 'finish' ? ' light' : '');
+    $('clock').textContent = fmt(clockNow());
+    renderTabbar(); renderSteps();
+    if (S.view === 'map') { mountMap(); renderSheet(); if (changed) { const t = T(); if (t) focusNext(); else setTimeout(() => centerOn(500, 600, .42), 20); } }
+    if (S.view === 'chat') { const m = $('msgs'); if (m) m.scrollTop = m.scrollHeight; }
+    if (S.view === 'home') mountBanners();
+  }
+  let bannerTimer = 0;
+  function snapTo(el, i, smooth) {
+    const kids = el.children; i = Math.max(0, Math.min(kids.length - 1, i));
+    el.scrollTo({ left: kids[i].offsetLeft - kids[0].offsetLeft, behavior: smooth && !RM ? 'smooth' : 'auto' });
+  }
+  const nearestIdx = (el) => { let best = 0, d = Infinity; [...el.children].forEach((k, i) => { const x = Math.abs(k.offsetLeft - el.children[0].offsetLeft - el.scrollLeft); if (x < d) { d = x; best = i; } }); return best; };
+  function mountBanners() {
+    clearInterval(bannerTimer);
+    // 滑鼠拖曳也能左右滑（觸控與觸控板原本就可以）
+    document.querySelectorAll('.hscroll').forEach((el) => {
+      let down = null, moved = 0;
+      el.addEventListener('pointerdown', (e) => {
+        if (e.pointerType !== 'mouse' || e.button !== 0) return;
+        down = { x: e.clientX, s: el.scrollLeft, i: nearestIdx(el) }; moved = 0; el.style.scrollSnapType = 'none'; el.style.cursor = 'grabbing';
+        clearInterval(bannerTimer);
+      });
+      const move = (e) => { if (!down) return; const dx = e.clientX - down.x; moved = Math.max(moved, Math.abs(dx)); el.scrollLeft = down.s - dx; };
+      const up = (e) => {
+        if (!down) return;
+        const dx = e.clientX - down.x, start = down.i; down = null; el.style.cursor = '';
+        const target = moved > 30 ? start + (dx < 0 ? 1 : -1) : nearestIdx(el);
+        snapTo(el, target, true);
+        setTimeout(() => { el.style.scrollSnapType = ''; }, 450);
+        window.removeEventListener('pointermove', move); window.removeEventListener('pointerup', up);
+      };
+      el.addEventListener('pointerdown', () => { window.addEventListener('pointermove', move); window.addEventListener('pointerup', up); });
+      el.addEventListener('click', (e) => { if (moved > 6) { e.stopPropagation(); e.preventDefault(); moved = 0; } }, true);
+      el.addEventListener('dragstart', (e) => e.preventDefault());
+    });
+    const b = $('banners'); if (!b) return;
+    const dots = () => document.querySelectorAll('#bdots i');
+    b.addEventListener('scroll', () => { const i = nearestIdx(b); dots().forEach((d, j) => d.classList.toggle('on', i === j)); }, { passive: true });
+    dots().forEach((d, j) => d.addEventListener('click', () => { clearInterval(bannerTimer); snapTo(b, j, true); }));
+    if (!RM) bannerTimer = setInterval(() => { if (!document.body.contains(b)) return clearInterval(bannerTimer); const i = nearestIdx(b); snapTo(b, (i + 1) % b.children.length, true); }, 4000);
+  }
+
+  function currentStep() {
+    const t = T();
+    if (S.view === 'chat') return 1;
+    if (S.view === 'route' && !t) return 2;
+    if (S.view === 'finish' || (t && t.stage === 'finished')) return 6;
+    if (S.modal && S.modal.type === 'replan') return 5;
+    if (t && t.delayed) return 5;
+    if (S.view === 'story' || S.view === 'quiz' || (S.modal && ['arrive', 'result', 'hint'].includes(S.modal.type))) return 4;
+    if (t) return t.idx === 0 ? 3 : 4;
+    return 0;
+  }
+  function renderSteps() {
+    const cur = currentStep();
+    $('steps').innerHTML = STEPS.map((s, i) => `<li class="${i < cur ? 'done' : ''} ${i === cur ? 'now' : ''}"><button type="button" data-jump="${i}"><span class="n">${i + 1}</span><span><span class="t">${s.t}</span><span class="s">${s.s}</span></span></button></li>`).join('');
+  }
+
+  // presenter jumps
+  function jump(n) {
+    cancelAnimationFrame(walkRAF);
+    const keep = S.prefs; S = fresh(); S.prefs = keep; MV.k = .6; prevView = '';
+    if (n === 0) return render();
+    if (n === 1) return startChat();
+    S.view = 'route'; S.tab = 'home';
+    if (n === 2) return render();
+    newTrip(); S.view = 'map'; S.tab = 'map'; S.sheetOpen = true;
+    if (n === 3) return render();
+    ffWalk(); S.view = 'story';
+    if (n === 4) return render();
+    S.view = 'map';
+    while (!T().delayed) { if (T().stage !== 'arrived') ffWalk(); ffQuiz(); }
+    if (n === 5) return render();
+    choose(replanOptions().find((o) => o.rec).key, true);
+    while (T().stage !== 'finished') { ffWalk(); if (T().stage === 'arrived') ffQuiz(); }
+    S.newBadges = []; render(); setTimeout(confetti, 400);
+  }
+  function autoNext() {
+    const t = T(), m = S.modal;
+    if (m) {
+      if (m.type === 'arrive') return go('story');
+      if (m.type === 'result') return afterTask();
+      if (m.type === 'replan') return choose(replanOptions().find((o) => o.rec).key);
+      S.modal = null; return render();
+    }
+    if (S.view === 'home' || S.view === 'badges' || S.view === 'wallet') { if (t && t.stage !== 'finished') return go('map'); if (t) return jump(0); return startChat(); }
+    if (S.view === 'chat') {
+      const c = S.chat; if (c.typing) return;
+      if (c.step < CHATQ.length) { const q = CHATQ[c.step]; if (q.multi) { c.picks = S.prefs.interests.slice(); return answerChat(c.picks.join('、'), { interests: c.picks, limits: ['每段步行 ≤ 10 分'] }); } const def = { time: '90 分鐘', who: '朋友', mode: '步行' }[q.key]; return answerChat(def); }
+      S.view = 'route'; return render();
+    }
+    if (S.view === 'route') { if (!t) { newTrip(); } S.view = 'map'; S.tab = 'map'; S.sheetOpen = true; return render(); }
+    if (S.view === 'map') { if (t && t.stage === 'ready') return startWalk(); if (t && t.stage === 'walking') { S.speed = 4; return; } if (!t) return startChat(); }
+    if (S.view === 'story') return go('quiz');
+    if (S.view === 'quiz') { if (S.quiz.sel == null) { S.quiz.sel = PLACES[t.route[t.idx]].quiz.a; return render(); } return submitQuiz(); }
+    if (S.view === 'finish') return go('badges');
+  }
+  function go(view) {
+    if (view === 'quiz') S.quiz = S.quiz || { sel: null, wrong: [], hint: false };
+    if (view === 'story' || view === 'quiz') S.modal = null;
+    if (['home', 'map', 'badges', 'wallet'].includes(view)) S.tab = view;
+    S.view = view; render();
+  }
+  function submitQuiz() {
+    const t = T(), q = PLACES[t.route[t.idx]].quiz, Q = S.quiz;
+    if (Q.sel == null) { toast('先選一個答案'); return; }
+    if (Q.sel === q.a) return completeTask();
+    Q.wrong.push(Q.sel); Q.sel = null; render();
+    const g = $('qgrid'); if (g) { g.classList.add('shake'); }
+    if (navigator.vibrate) try { navigator.vibrate(120); } catch (e) { /* ignore */ }
+  }
+  function beginTrip() {
+    newTrip(); S.view = 'map'; S.tab = 'map'; S.sheetOpen = true; render();
+    toast('行程開始！按「開始步行」前往第一站');
+  }
+  function speak(text) {
+    try {
+      if (!('speechSynthesis' in window)) throw new Error('no tts');
+      if (speechSynthesis.speaking) { speechSynthesis.cancel(); return toast('已停止朗讀'); }
+      const u = new SpeechSynthesisUtterance(text); u.lang = 'zh-TW'; u.rate = 1.02; speechSynthesis.speak(u); toast('朗讀中，再按一次停止');
+    } catch (e) { toast('這個瀏覽器不支援語音朗讀'); }
+  }
+
+  // ---------- events ----------
+  document.addEventListener('click', (e) => {
+    const b = e.target.closest('button, [data-act]'); if (!b) return;
+    const d = b.dataset;
+    if (d.jump) return jump(Number(d.jump));
+    if (d.tab) { if (d.tab === S.tab && S.view === d.tab) return; return go(d.tab); }
+    if (d.near) { S.focus = d.near; S.sheetOpen = true; S.tab = 'map'; S.view = 'map'; render(); setTimeout(() => centerOn(PLACES[d.near].x, PLACES[d.near].y, .7, true), 60); return; }
+    if (d.ans) return answerChat(d.ans);
+    if (d.pick) { const c = S.chat; c.picks = c.picks.includes(d.pick) ? c.picks.filter((x) => x !== d.pick) : c.picks.concat(d.pick); return renderChatOnly(); }
+    if (d.time) { S.prefs.time = Number(d.time); return render(); }
+    if (d.opt) { if (S.quiz.lock) return; S.quiz.sel = Number(d.opt); S.quiz.lock = true; render(); setTimeout(() => { if (!S.quiz) return; S.quiz.lock = false; submitQuiz(); }, RM ? 0 : 380); return; }
+    if (d.choose) return choose(d.choose);
+    if (d.speed) { S.speed = Number(d.speed); document.querySelectorAll('[data-speed]').forEach((x) => x.classList.toggle('on', x === b)); return; }
+    if (d.redeem) {
+      const shops = [['廟口米粉攤', 10], ['東門咖啡', 15], ['貢丸老店', 20]][d.redeem];
+      S.coins -= shops[1]; S.hist.unshift({ n: -shops[1], label: '兌換 ' + shops[0] + '（示意）', t: fmt(clockNow()) });
+      S.modal = { type: 'redeem', nm: shops[0] }; return render();
+    }
+    const a = d.act;
+    const acts = {
+      reset: () => jump(0), auto: autoNext, chat: startChat, home: () => go('home'), tomap: () => go('map'), tobadges: () => go('badges'),
+      toroute: () => go('route'), soon: () => toast('這條路線即將推出'), share: () => toast('示意：正式版可分享路線給同行朋友'),
+      begin: beginTrip,
+      pickdone: () => { const c = S.chat; if (!c.picks.length) return toast('至少選一個，或直接打字'); answerChat(c.picks.join('、'), { interests: c.picks, limits: [] }); },
+      walk: startWalk, tofinish: () => go('finish'), sheet: () => { S.sheetOpen = !S.sheetOpen; renderSheet(); }, unfocus: () => { S.focus = null; renderSheet(); focusNext(); },
+      zin: () => { const r = $('mapwrap').getBoundingClientRect(); zoomAt(r.left + r.width / 2, r.top + r.height / 2, 1.25); },
+      zout: () => { const r = $('mapwrap').getBoundingClientRect(); zoomAt(r.left + r.width / 2, r.top + r.height / 2, .8); },
+      locate: () => centerOn(S.me.x, S.me.y, .75, true), shop: () => go('wallet'),
+      story: () => go('story'), quiz: () => go('quiz'), submit: submitQuiz, aftertask: () => afterTask(),
+      hint: () => { if (S.quiz.hint) return toast('提示已經打開了'); S.modal = { type: 'hint' }; render(); },
+      usehint: () => { S.quiz.hint = true; S.coins = Math.max(0, S.coins - 3); S.hist.unshift({ n: -3, label: '使用提示', t: fmt(clockNow()) }); S.modal = null; render(); },
+      closemodal: () => { S.modal = null; render(); },
+      speak: () => speak(PLACES[T().route[T().idx]].story), speakq: () => { const q = PLACES[T().route[T().idx]].quiz; speak(q.q + '。選項：' + q.opts.join('、')); },
+      egg: () => { if (S.egg) return; S.egg = true; giveBadge('egg'); const el = e.target.closest('.egg'); addCoins(8, '找到竹筍彩蛋', el || b); confetti(); toast('找到彩蛋！+8 竹跡幣・獲得「彩蛋獵人」'); setTimeout(render, 900); },
+      sharebadge: () => { S.modal = { type: 'share' }; render(); }
+    };
+    if (acts[a]) acts[a]();
+  });
+  document.addEventListener('submit', (e) => {
+    if (e.target.id !== 'composer') return; e.preventDefault();
+    const c = S.chat;
+    if (c.typing) return toast('小竹正在回覆，稍等一下');
+    const inp = $('chatin'); const text = inp.value.trim(); if (!text) return; inp.value = '';
+    if (c.step < CHATQ.length) {
+      const p = parse(text); const q = CHATQ[c.step];
+      if (q.key === 'time' && !p.time) p.time = 90;
+      if (q.key === 'interests') { if (!p.interests.length) p.interests = ['城市散步']; }
+      if (q.key === 'who' && !p.who) p.who = /朋友|同學/.test(text) ? '朋友' : /自己|一個人/.test(text) ? '自己' : /foreign|外國/i.test(text) ? '外國旅客' : '朋友';
+      if (q.key === 'mode' && !p.mode) p.mode = '步行';
+      return answerChat(text, p);
+    }
+    c.msgs.push({ who: 'me', text }); renderChatOnly();
+    if (/出發|開始|走吧|好|ok|go/i.test(text)) { botSay('出發！我們先往第一站走。', () => setTimeout(beginTrip, RM ? 0 : 500)); return; }
+    const p = parse(text);
+    if (p.time && p.time !== S.prefs.time) { S.prefs.time = p.time; botSay(`改成 ${p.time} 分鐘，我重排好了：`, () => { c.msgs.push({ who: 'route' }); renderChatOnly(); }); }
+    else botSay('收到！路線已經考慮進去，按「看完整路線」就能出發。');
+  });
+
+  render();
+})();
+</script>
+
+</body>
+</html>
