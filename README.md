@@ -7,3 +7,5 @@
 線上展示：https://timhu950112.github.io/chutrace-demo/
 
 > 景點、步行與停留時間為示意資料；超時情境為模擬；AI 解析在 Demo 中以關鍵字模擬；店家兌換僅展示流程，目前沒有合作店家。
+
+地圖資料 © [OpenStreetMap](https://www.openstreetmap.org/copyright) 貢獻者，依 ODbL 授權使用。
